@@ -1,0 +1,102 @@
+/* ============================================================
+   PLASH PILATES — Cookie Banner
+   ============================================================ */
+.cookie-banner {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--ink);
+  color: var(--ivory);
+  z-index: var(--z-cookie-banner);
+  padding: var(--space-6) var(--space-8);
+  box-shadow: 0 -4px 24px rgba(43,42,37,0.2);
+  transform: translateY(100%);
+  transition: transform var(--t-slow);
+}
+.cookie-banner.visible { transform: translateY(0); }
+.cookie-banner-inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+.cookie-banner-text {
+  font-size: var(--text-sm);
+  color: rgba(245,241,232,0.8);
+  margin-bottom: var(--space-4);
+  line-height: 1.6;
+}
+.cookie-banner-text a { color: var(--rust); text-decoration: underline; }
+.cookie-banner-actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.cookie-banner .btn-accept {
+  background: var(--rust);
+  color: var(--ivory);
+  border: 1px solid var(--rust);
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.cookie-banner .btn-accept:hover { background: var(--rust-dark); }
+.cookie-banner .btn-reject {
+  background: transparent;
+  color: var(--ivory);
+  border: 1px solid rgba(245,241,232,0.3);
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.cookie-banner .btn-reject:hover { border-color: rgba(245,241,232,0.6); }
+.cookie-banner .btn-manage {
+  background: transparent;
+  color: rgba(245,241,232,0.6);
+  border: none;
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.cookie-banner .btn-manage:hover { color: var(--ivory); }
+
+/* Preferences panel */
+.cookie-preferences { display: none; margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid rgba(245,241,232,0.1); }
+.cookie-preferences.open { display: block; }
+.cookie-pref-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid rgba(245,241,232,0.05);
+}
+.cookie-pref-info { flex: 1; }
+.cookie-pref-name { font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--ivory); }
+.cookie-pref-desc { font-size: var(--text-xs); color: rgba(245,241,232,0.5); }
+/* Toggle switch */
+.toggle-switch { position: relative; width: 40px; height: 22px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0;
+  background: rgba(245,241,232,0.2);
+  border-radius: 11px;
+  cursor: pointer;
+  transition: background var(--t-fast);
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 18px; height: 18px;
+  background: var(--ivory);
+  border-radius: 50%;
+  transition: transform var(--t-fast);
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--rust); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+.toggle-switch input:disabled + .toggle-slider { opacity: 0.5; cursor: not-allowed; }
+.cookie-pref-save { margin-top: var(--space-4); }
+
+@media (max-width: 768px) {
+  .cookie-banner { padding: var(--space-4); }
+}

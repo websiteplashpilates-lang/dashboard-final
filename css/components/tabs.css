@@ -1,0 +1,33 @@
+/* ============================================================
+   PLASH PILATES — Tabs
+   ============================================================ */
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--ink-10);
+  margin-bottom: var(--space-6);
+  gap: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.tab-item {
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink-50);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--t-fast);
+  white-space: nowrap;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+.tab-item:hover { color: var(--ink); }
+.tab-item.active {
+  color: var(--ink);
+  border-bottom-color: var(--rust);
+  font-weight: var(--weight-semibold);
+}
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }

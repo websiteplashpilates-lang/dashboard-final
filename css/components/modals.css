@@ -1,0 +1,76 @@
+/* ============================================================
+   PLASH PILATES — Modals
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(43, 42, 37, 0.5);
+  z-index: var(--z-modal-overlay);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--t-normal), visibility var(--t-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+.modal-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+.modal-panel {
+  background: white;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xl);
+  max-width: 560px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  transform: translateY(16px) scale(0.97);
+  transition: transform var(--t-normal);
+}
+.modal-overlay.open .modal-panel {
+  transform: translateY(0) scale(1);
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--ink-10);
+}
+.modal-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+.modal-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--ink-50);
+  transition: all var(--t-fast);
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+.modal-close:hover { background: var(--ink-05); color: var(--ink); }
+.modal-body { padding: var(--space-6); }
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--ink-10);
+}
+.modal-panel-wide { max-width: 720px; }
+.modal-panel-narrow { max-width: 420px; }
+
+@media (max-width: 768px) {
+  .modal-panel { max-width: 100%; margin: var(--space-4); max-height: 90vh; }
+}

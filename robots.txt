@@ -1,0 +1,10 @@
+# Plash Pilates Studio — Search Engine Crawler Policy
+User-agent: *
+Allow: /
+Allow: /index.html
+Allow: /assets/
+Disallow: /js/
+Disallow: /.env
+Disallow: /supabase/
+
+Sitemap: https://plashpilates.com/sitemap.xml

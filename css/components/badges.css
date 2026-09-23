@@ -1,0 +1,35 @@
+/* ============================================================
+   PLASH PILATES — Badges
+   ============================================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  line-height: 1.6;
+}
+.badge-active    { background: var(--moss-10); color: var(--moss); }
+.badge-pending   { background: var(--rust-10); color: var(--rust); }
+.badge-expired   { background: var(--rose-10); color: var(--rose); }
+.badge-paused    { background: var(--ink-10);  color: var(--ink); }
+.badge-cancelled { background: var(--rose-10); color: var(--rose); }
+.badge-completed { background: var(--moss-10); color: var(--moss); }
+.badge-no-show   { background: var(--rose-20); color: var(--rose); }
+.badge-full      { background: var(--rose);    color: var(--ivory); }
+.badge-upcoming  { background: var(--rust-10); color: var(--rust-dark); }
+.badge-master    { background: var(--ink);     color: var(--ivory); }
+.badge-lead      { background: var(--olive);   color: var(--ivory); }
+.badge-standard  { background: var(--stone);   color: var(--ink); }
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.badge-active .badge-dot    { background: var(--moss); }
+.badge-pending .badge-dot   { background: var(--rust); }
+.badge-expired .badge-dot   { background: var(--rose); }

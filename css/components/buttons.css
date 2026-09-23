@@ -1,0 +1,144 @@
+/* ============================================================
+   PLASH PILATES — Buttons
+   Primary, secondary, ghost, destructive variants.
+   ============================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--t-fast);
+  white-space: nowrap;
+  text-decoration: none;
+  user-select: none;
+}
+
+.btn:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Primary — rust bg */
+.btn-primary {
+  background: var(--rust);
+  color: var(--ivory);
+  border-color: var(--rust);
+}
+.btn-primary:hover {
+  background: var(--rust-dark);
+  border-color: var(--rust-dark);
+}
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* Secondary — inverted light style with ink text */
+.btn-secondary {
+  background: #FFFFFF;
+  color: var(--ink);
+  border-color: rgba(43, 40, 47, 0.22);
+  box-shadow: 0 1px 2px rgba(43, 40, 47, 0.05);
+}
+.btn-secondary:hover {
+  background: var(--stone);
+  color: var(--ink);
+  border-color: rgba(43, 40, 47, 0.45);
+}
+.btn-secondary:active {
+  background: var(--ivory);
+  transform: scale(0.98);
+}
+
+.btn svg,
+.btn [data-lucide] {
+  stroke: currentColor;
+  flex-shrink: 0;
+}
+
+/* Outline */
+.btn-outline {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--ink-20);
+}
+.btn-outline:hover {
+  background: var(--ink-05);
+  border-color: var(--ink-50);
+}
+
+/* Ghost — no border */
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: transparent;
+}
+.btn-ghost:hover {
+  background: var(--ink-05);
+}
+
+/* Destructive — rose */
+.btn-destructive {
+  background: var(--rose);
+  color: var(--ivory);
+  border-color: var(--rose);
+}
+.btn-destructive:hover {
+  background: #a04f3d;
+  border-color: #a04f3d;
+}
+
+/* Success — moss */
+.btn-success {
+  background: var(--moss);
+  color: var(--ivory);
+  border-color: var(--moss);
+}
+.btn-success:hover {
+  background: #474335;
+}
+
+/* Sizes */
+.btn-sm {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-xs);
+}
+
+.btn-lg {
+  padding: var(--space-4) var(--space-8);
+  font-size: var(--text-base);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* Icon-only button */
+.btn-icon {
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.btn-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Button group */
+.btn-group {
+  display: flex;
+  gap: var(--space-2);
+}

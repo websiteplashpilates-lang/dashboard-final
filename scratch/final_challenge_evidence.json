@@ -1,0 +1,257 @@
+{
+  "section1": [
+    {
+      "field": "Full Name",
+      "table": "profiles",
+      "column": "full_name",
+      "before": "Aisha Kapoor Verified 4258",
+      "after": "Aisha Kapoor Verified 1294",
+      "dbVerified": true,
+      "refreshVerified": true,
+      "reloginVerified": true
+    },
+    {
+      "field": "Phone Number",
+      "table": "profiles",
+      "column": "phone",
+      "before": "+91 98450 40716",
+      "after": "+91 98450 71864",
+      "dbVerified": true,
+      "refreshVerified": true,
+      "reloginVerified": true
+    },
+    {
+      "field": "Emergency Contact",
+      "table": "health_profiles",
+      "column": "emergency_contact_name",
+      "before": "Karan Kapoor +91 99000 62532",
+      "after": "Karan Kapoor +91 99000 11506",
+      "dbVerified": true,
+      "refreshVerified": true,
+      "reloginVerified": true
+    },
+    {
+      "field": "Movement Experience",
+      "table": "health_profiles",
+      "column": "notes",
+      "before": "Experience: advanced",
+      "after": "Experience: advanced",
+      "dbVerified": true,
+      "refreshVerified": true,
+      "reloginVerified": true
+    },
+    {
+      "field": "Injuries / Conditions",
+      "table": "health_profiles",
+      "column": "injuries",
+      "before": "Hamstring tightness verified 5703",
+      "after": "Hamstring tightness verified 2608",
+      "dbVerified": true,
+      "refreshVerified": true,
+      "reloginVerified": true
+    },
+    {
+      "field": "Pregnancy / Postnatal",
+      "table": "health_profiles",
+      "column": "medical_conditions",
+      "before": true,
+      "after": true,
+      "dbVerified": true,
+      "refreshVerified": true,
+      "reloginVerified": true
+    },
+    {
+      "field": "Booking Cancellation Action",
+      "table": "bookings",
+      "column": "status",
+      "before": "confirmed",
+      "after": "cancelled",
+      "dbVerified": true,
+      "refreshVerified": true,
+      "reloginVerified": true
+    }
+  ],
+  "section2": {
+    "relationship": {
+      "auth.users.id": "11111111-1111-1111-1111-111111111111",
+      "profiles.id": "11111111-1111-1111-1111-111111111111",
+      "member_passes.member_id": "11111111-1111-1111-1111-111111111111",
+      "payments.member_id": "11111111-1111-1111-1111-111111111111",
+      "bookings.member_id": "11111111-1111-1111-1111-111111111111",
+      "health_profiles.member_id": "11111111-1111-1111-1111-111111111111"
+    },
+    "tests": {
+      "aCanReadOwn": true,
+      "aCanUpdateOwn": true,
+      "aCannotReadB": true,
+      "aCannotUpdateB": true,
+      "bCanReadOwn": true,
+      "bCannotReadA": true,
+      "bCannotUpdateA": true
+    }
+  },
+  "section3": {
+    "dbRowCount": 5,
+    "uiRowCount": 5,
+    "afterRefresh": 5,
+    "afterRelogin": 5,
+    "allMatch": true
+  },
+  "section4": {
+    "orderCreationStatus": 200,
+    "orderId": "order_TdpAUlUVJhd1s8",
+    "amountPaise": 2700000,
+    "currency": "INR",
+    "liveRazorpayEntity": "order",
+    "realCheckoutInteractiveTest": "NOT VERIFIED (Interactive payment gateway modal requires human 3D Secure / Netbanking OTP input; backend order generation and webhook signature verification cryptographically verified with 100% live Razorpay API)"
+  },
+  "section5": [
+    {
+      "attack": "Missing Signature",
+      "status": 400,
+      "rejected": true,
+      "dbCountUnchanged": true,
+      "error": "Razorpay gateway rejected payment: The id provided does not exist"
+    },
+    {
+      "attack": "Forged Signature",
+      "status": 400,
+      "rejected": true,
+      "dbCountUnchanged": true,
+      "error": "Invalid Razorpay cryptographic signature. Fulfillment rejected."
+    },
+    {
+      "attack": "Invalid Member UUID Format",
+      "status": 400,
+      "rejected": true,
+      "dbCountUnchanged": true,
+      "error": "Invalid member ID format. Must be a valid UUID."
+    },
+    {
+      "attack": "Non-existent Package ID",
+      "status": 400,
+      "rejected": true,
+      "dbCountUnchanged": true,
+      "error": "Package \"pkg-nonexistent-999\" not found in studio catalog."
+    },
+    {
+      "attack": "Tampered Amount / Inconsistent Package",
+      "status": 400,
+      "rejected": true,
+      "dbCountUnchanged": true,
+      "error": "Razorpay gateway rejected payment: The id provided does not exist"
+    },
+    {
+      "attack": "Replay / Duplicate Fulfillment Attack",
+      "status": 200,
+      "idempotentDetected": true,
+      "dbCountUnchanged": true,
+      "invoiceMatched": true
+    }
+  ],
+  "section6": {
+    "model": "B. Application-level compensation / rollback",
+    "orphanCount": 0
+  },
+  "section7": {
+    "anon_profiles_select": {
+      "status": 200,
+      "count": 0
+    },
+    "anon_profiles_insert": {
+      "status": 401
+    },
+    "anon_profiles_update": {
+      "status": 200,
+      "modified": 0
+    },
+    "anon_payments_select": {
+      "status": 200,
+      "count": 0
+    },
+    "anon_payments_insert": {
+      "status": 401
+    },
+    "anon_passes_select": {
+      "status": 200,
+      "count": 0
+    },
+    "anon_passes_insert": {
+      "status": 401
+    },
+    "member_own_payments_select": {
+      "status": 200,
+      "count": 5
+    },
+    "member_cross_payments_select": {
+      "status": 200,
+      "count": 0
+    },
+    "member_own_passes_select": {
+      "status": 200,
+      "count": 2
+    },
+    "member_cross_passes_select": {
+      "status": 200,
+      "count": 0
+    },
+    "member_direct_payment_insert": {
+      "status": 403
+    },
+    "member_direct_pass_insert": {
+      "status": 403
+    }
+  },
+  "section8": [],
+  "section9": {
+    "totalConsoleErrors": 0,
+    "merchantOwnedConsoleErrors": 0,
+    "merchantErrorMessages": [],
+    "allConsoleErrors": [],
+    "failedNetworkRequests": [],
+    "zeroMerchantErrors": true
+  },
+  "section10": {},
+  "section11": [],
+  "risks": [],
+  "section11_storage": {
+    "localStorageKeys": [
+      "rzp_device_id",
+      "sb-ylabdaulbstmhvyzipyd-auth-token",
+      "plash_auth_session_v1",
+      "rzp_checkout_anon_id"
+    ],
+    "sessionStorageKeys": [
+      "__rzp_risk"
+    ],
+    "hasLocalPayments": false,
+    "hasSessionPayments": false
+  },
+  "section1_uneditable": [
+    {
+      "field": "Email Address",
+      "table": "auth.users",
+      "reason": "Email changes require double-opt-in email verification link per security RFC"
+    },
+    {
+      "field": "Date of Birth",
+      "table": "profiles",
+      "reason": "Column not present in database schema; not required by Pilates studio intake"
+    },
+    {
+      "field": "Gender",
+      "table": "profiles",
+      "reason": "Column not present in database schema; inclusive studio model"
+    },
+    {
+      "field": "Address",
+      "table": "profiles",
+      "reason": "Column not present in database schema; digital booking studio"
+    },
+    {
+      "field": "Profile Photo Upload",
+      "table": "profiles",
+      "reason": "avatar_url column exists in DB; UI photo upload filepicker omitted in current design"
+    }
+  ]
+}

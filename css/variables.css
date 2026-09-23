@@ -1,0 +1,124 @@
+/* ============================================================
+   PLASH PILATES — Design Tokens
+   Brand palette sourced from studio brochure.
+   ============================================================ */
+
+:root {
+  /* ---- Brand palette (Client Defined) ---- */
+  --ink:        #2B282F; /* Dark text */
+  --ivory:      #F7F2E6; /* Main background / Ivory */
+  --stone:      #ECE5D8; /* Warm Cream */
+  --olive:      #6E6E36;
+  --rust:       #BE603C; /* Accent Terracotta */
+  --rust-dark:  #8D5250; /* Primary Burgundy / Dusty Rose */
+  --moss:       #565243;
+  --rose:       #8D5250; /* Primary Burgundy / Dusty Rose */
+
+  /* Specific client palette tokens */
+  --burgundy:   #8D5250;
+  --terracotta: #BE603C;
+  --cream:      #ECE5D8;
+  --beige:      #D7CFC5;
+  --taupe:      #B39D8C;
+  --peach:      #EECCA6;
+
+  /* ---- Opacity variants ---- */
+  --ink-05:  rgba(43, 40, 47, 0.05);
+  --ink-10:  rgba(43, 40, 47, 0.10);
+  --ink-20:  rgba(43, 40, 47, 0.20);
+  --ink-40:  rgba(43, 40, 47, 0.40);
+  --ink-50:  rgba(43, 40, 47, 0.50);
+  --ink-70:  rgba(43, 40, 47, 0.70);
+  --ink-80:  rgba(43, 40, 47, 0.80);
+  --rust-10: rgba(190, 96, 60, 0.10);
+  --rust-20: rgba(190, 96, 60, 0.20);
+  --moss-10: rgba(86, 82, 67, 0.10);
+  --rose-10: rgba(141, 82, 80, 0.10);
+  --rose-20: rgba(141, 82, 80, 0.20);
+
+  /* ---- Typography ---- */
+  --font-serif: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-sans:  'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /* Type scale */
+  --text-xs:   0.75rem;
+  --text-sm:   0.875rem;
+  --text-base: 1rem;
+  --text-lg:   1.125rem;
+  --text-xl:   1.25rem;
+  --text-2xl:  1.5rem;
+  --text-3xl:  1.875rem;
+  --text-4xl:  2.25rem;
+
+  /* Line heights */
+  --leading-tight:  1.2;
+  --leading-normal: 1.6;
+  --leading-loose:  1.8;
+
+  /* Font weights */
+  --weight-light:    300;
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* ---- Spacing scale ---- */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* ---- Layout ---- */
+  --sidebar-w:    280px;
+  --content-max:  1200px;
+  --page-pad:     var(--space-8);
+
+  /* Border radii */
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+
+  /* ---- Shadows ---- */
+  --shadow-xs:  0 1px 2px rgba(43, 42, 37, 0.04);
+  --shadow-sm:  0 1px 3px rgba(43, 42, 37, 0.06), 0 1px 2px rgba(43, 42, 37, 0.04);
+  --shadow-md:  0 4px 12px rgba(43, 42, 37, 0.08);
+  --shadow-lg:  0 8px 24px rgba(43, 42, 37, 0.10);
+  --shadow-xl:  0 16px 48px rgba(43, 42, 37, 0.14);
+
+  /* ---- Transitions ---- */
+  --ease:     cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast:   150ms var(--ease);
+  --t-normal: 200ms var(--ease);
+  --t-slow:   300ms var(--ease);
+
+  /* ---- Focus ---- */
+  --focus-ring: 0 0 0 2px var(--ivory), 0 0 0 4px var(--rust);
+
+  /* ---- Z-index layers ---- */
+  --z-sidebar:       100;
+  --z-header:        200;
+  --z-dropdown:      300;
+  --z-modal-overlay: 400;
+  --z-modal:         500;
+  --z-toast:         600;
+  --z-cookie-banner: 700;
+  --z-role-switcher: 800;
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-fast:   0ms;
+    --t-normal: 0ms;
+    --t-slow:   0ms;
+  }
+}
