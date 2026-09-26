@@ -2087,11 +2087,51 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
             reviews = JSON.parse(fs.readFileSync(reviewFilePath, 'utf-8'));
           } catch (_) {}
         }
+        try {
+          const tmpPath = path.join('/tmp', 'partner_reviews.json');
+          if (fs.existsSync(tmpPath)) {
+            const tmpReviews = JSON.parse(fs.readFileSync(tmpPath, 'utf-8'));
+            if (Array.isArray(tmpReviews) && tmpReviews.length > 0) {
+              tmpReviews.forEach(tr => {
+                const idx = reviews.findIndex(r => r.id === tr.id || r.passId === tr.passId);
+                if (idx >= 0) reviews[idx] = { ...reviews[idx], ...tr };
+                else reviews.push(tr);
+              });
+            }
+          }
+        } catch (_) {}
         if (!Array.isArray(reviews)) reviews = [];
+
+        // Merge persistent decisions from Supabase partner_notifications
+        const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+        if (SUPABASE_URL && supabaseKey) {
+          try {
+            const notifRes = await fetch(`${SUPABASE_URL}/rest/v1/partner_notifications?org_id=eq.partner-physicq57&type=eq.partner_review&select=*`, {
+              headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+            });
+            if (notifRes.ok) {
+              const notifs = await notifRes.json();
+              (notifs || []).forEach(n => {
+                try {
+                  const saved = JSON.parse(n.message);
+                  if (saved && (saved.id || saved.passId)) {
+                    const idx = reviews.findIndex(r => r.id === saved.id || r.passId === saved.passId);
+                    if (idx >= 0) {
+                      reviews[idx] = { ...reviews[idx], ...saved };
+                    } else {
+                      reviews.unshift(saved);
+                    }
+                  }
+                } catch (_) {}
+              });
+            }
+          } catch (supaErr) {
+            console.warn('[Partner reviews Supabase notif sync warning]', supaErr.message);
+          }
+        }
 
         // Auto-seed/sync from live Supabase member_passes with Barre (safe non-blocking)
         try {
-          const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
           if (SUPABASE_URL && supabaseKey) {
             const passRes = await fetch(`${SUPABASE_URL}/rest/v1/member_passes?select=*,member:profiles(*),package:packages(*),credits:member_pass_credits(*)&order=created_at.desc`, {
               headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
@@ -2131,9 +2171,15 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
                 }
               });
               if (mutated) {
-                const dataDir = path.join(__dirname, 'data');
-                if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-                fs.writeFileSync(reviewFilePath, JSON.stringify(reviews, null, 2));
+                try {
+                  const dataDir = path.join(__dirname, 'data');
+                  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+                  fs.writeFileSync(reviewFilePath, JSON.stringify(reviews, null, 2));
+                } catch (_) {
+                  try {
+                    fs.writeFileSync(path.join('/tmp', 'partner_reviews.json'), JSON.stringify(reviews, null, 2));
+                  } catch (__) {}
+                }
               }
             }
           }
@@ -2161,7 +2207,48 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
             reviews = JSON.parse(fs.readFileSync(reviewFilePath, 'utf-8'));
           } catch (_) {}
         }
+        try {
+          const tmpPath = path.join('/tmp', 'partner_reviews.json');
+          if (fs.existsSync(tmpPath)) {
+            const tmpReviews = JSON.parse(fs.readFileSync(tmpPath, 'utf-8'));
+            if (Array.isArray(tmpReviews) && tmpReviews.length > 0) {
+              tmpReviews.forEach(tr => {
+                const idx = reviews.findIndex(r => r.id === tr.id || r.passId === tr.passId);
+                if (idx >= 0) reviews[idx] = { ...reviews[idx], ...tr };
+                else reviews.push(tr);
+              });
+            }
+          }
+        } catch (_) {}
         if (!Array.isArray(reviews)) reviews = [];
+
+        // Merge persistent decisions from Supabase partner_notifications
+        const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+        if (SUPABASE_URL && supabaseKey) {
+          try {
+            const notifRes = await fetch(`${SUPABASE_URL}/rest/v1/partner_notifications?org_id=eq.partner-physicq57&type=eq.partner_review&select=*`, {
+              headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+            });
+            if (notifRes.ok) {
+              const notifs = await notifRes.json();
+              (notifs || []).forEach(n => {
+                try {
+                  const saved = JSON.parse(n.message);
+                  if (saved && (saved.id || saved.passId)) {
+                    const idx = reviews.findIndex(r => r.id === saved.id || r.passId === saved.passId);
+                    if (idx >= 0) {
+                      reviews[idx] = { ...reviews[idx], ...saved };
+                    } else {
+                      reviews.unshift(saved);
+                    }
+                  }
+                } catch (_) {}
+              });
+            }
+          } catch (supaErr) {
+            console.warn('[Partner reviews Supabase notif sync warning]', supaErr.message);
+          }
+        }
 
         if (body.action === 'save_all' && Array.isArray(body.reviews)) {
           reviews = body.reviews;
@@ -2191,7 +2278,6 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
           r.decidedBy = body.decidedBy || 'Physicq 57 Coach';
           r.adminNotified = true;
 
-          const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
           let targetPassId = r.passId;
           if (!targetPassId && body.reviewId.startsWith('prev-')) {
             targetPassId = body.reviewId.replace('prev-', '');
@@ -2255,6 +2341,33 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
               console.error('[Barre Credit Decline Error]', decErr.message);
             }
           }
+
+          // Cloud Persistence in Supabase partner_notifications
+          if (SUPABASE_URL && supabaseKey && r) {
+            try {
+              await fetch(`${SUPABASE_URL}/rest/v1/partner_notifications?org_id=eq.partner-physicq57&type=eq.partner_review&title=eq.${encodeURIComponent(r.id)}`, {
+                method: 'DELETE',
+                headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+              });
+              await fetch(`${SUPABASE_URL}/rest/v1/partner_notifications`, {
+                method: 'POST',
+                headers: {
+                  apikey: supabaseKey,
+                  Authorization: `Bearer ${supabaseKey}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  org_id: 'partner-physicq57',
+                  type: 'partner_review',
+                  title: r.id,
+                  message: JSON.stringify(r),
+                  read: true
+                })
+              });
+            } catch (supaSaveErr) {
+              console.warn('[Partner review decision Supabase persist warning]', supaSaveErr.message);
+            }
+          }
         } else if (body.action === 'refund' && body.reviewId) {
           let r = reviews.find(x => x.id === body.reviewId || x.passId === body.reviewId.replace('prev-', ''));
           if (r) {
@@ -2265,12 +2378,44 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
             r.refundNotes = body.notes || '';
             r.refundProcessedBy = body.processedBy || 'Studio Administrator';
             if (body.amount) r.refundAmount = Number(body.amount);
+
+            // Cloud Persistence in Supabase partner_notifications
+            if (SUPABASE_URL && supabaseKey) {
+              try {
+                await fetch(`${SUPABASE_URL}/rest/v1/partner_notifications?org_id=eq.partner-physicq57&type=eq.partner_review&title=eq.${encodeURIComponent(r.id)}`, {
+                  method: 'DELETE',
+                  headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+                });
+                await fetch(`${SUPABASE_URL}/rest/v1/partner_notifications`, {
+                  method: 'POST',
+                  headers: {
+                    apikey: supabaseKey,
+                    Authorization: `Bearer ${supabaseKey}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    org_id: 'partner-physicq57',
+                    type: 'partner_review',
+                    title: r.id,
+                    message: JSON.stringify(r),
+                    read: true
+                  })
+                });
+              } catch (_) {}
+            }
           }
         }
 
-        const dataDir = path.join(__dirname, 'data');
-        if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-        fs.writeFileSync(reviewFilePath, JSON.stringify(reviews, null, 2));
+        // Safe file write (won't crash on read-only serverless filesystem)
+        try {
+          const dataDir = path.join(__dirname, 'data');
+          if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+          fs.writeFileSync(reviewFilePath, JSON.stringify(reviews, null, 2));
+        } catch (_) {
+          try {
+            fs.writeFileSync(path.join('/tmp', 'partner_reviews.json'), JSON.stringify(reviews, null, 2));
+          } catch (__) {}
+        }
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ success: true, reviews }));

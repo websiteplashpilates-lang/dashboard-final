@@ -2133,7 +2133,14 @@ export async function syncPartnerReviews() {
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data.reviews)) {
-        state.partnerReviews = data.reviews;
+        const localReviews = state.partnerReviews || [];
+        state.partnerReviews = data.reviews.map(serverRev => {
+          const localRev = localReviews.find(l => l.id === serverRev.id || l.passId === serverRev.passId);
+          if (localRev && (localRev.status === 'accepted' || localRev.status === 'declined') && serverRev.status === 'pending') {
+            return { ...serverRev, ...localRev };
+          }
+          return serverRev;
+        });
       }
     }
   } catch (_) {}

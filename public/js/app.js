@@ -46,7 +46,7 @@ import * as adminRefunds from './pages/admin/refunds.js?v=110';
 import * as trainerDashboard from './pages/trainer/dashboard.js?v=122';
 
 // Page imports — Partner Portal (Physicq 57)
-import * as partnerRequests from './pages/partner/booking-requests.js?v=108';
+import * as partnerRequests from './pages/partner/booking-requests.js?v=210';
 import * as partnerRoster from './pages/partner/roster.js';
 import * as partnerMemberDetail from './pages/partner/member-detail.js';
 import * as partnerSchedule from './pages/partner/schedule.js?v=111';
