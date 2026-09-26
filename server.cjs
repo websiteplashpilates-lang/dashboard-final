@@ -2812,6 +2812,86 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
       }
     }
 
+    // API Route: Authoritative Admin Package Management (Delete with safe FK re-linking)
+    if (req.method === 'POST' && pathname === '/api/admin/package') {
+      try {
+        const body = await parseJsonBody(req);
+        const { action, packageId } = body;
+        const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+
+        if (action === 'delete') {
+          const targetId = packageId;
+          if (SUPABASE_URL && supabaseKey && targetId) {
+            try {
+              // 1. Ensure pkg-archived anchor exists
+              await fetch(`${SUPABASE_URL}/rest/v1/packages`, {
+                method: 'POST',
+                headers: {
+                  apikey: supabaseKey,
+                  Authorization: `Bearer ${supabaseKey}`,
+                  'Content-Type': 'application/json',
+                  Prefer: 'resolution=merge-duplicates'
+                },
+                body: JSON.stringify({
+                  id: 'pkg-archived',
+                  name: 'Archived Membership Plan',
+                  discipline_id: null,
+                  duration_months: 1,
+                  price_inr: 0,
+                  first_circle_price_inr: 0,
+                  session_allocations: [],
+                  is_popular: false
+                })
+              });
+
+              // 2. Re-link member passes referencing this package
+              await fetch(`${SUPABASE_URL}/rest/v1/member_passes?package_id=eq.${encodeURIComponent(targetId)}`, {
+                method: 'PATCH',
+                headers: {
+                  apikey: supabaseKey,
+                  Authorization: `Bearer ${supabaseKey}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ package_id: 'pkg-archived' })
+              });
+
+              // 3. Re-link payments referencing this package
+              await fetch(`${SUPABASE_URL}/rest/v1/payments?package_id=eq.${encodeURIComponent(targetId)}`, {
+                method: 'PATCH',
+                headers: {
+                  apikey: supabaseKey,
+                  Authorization: `Bearer ${supabaseKey}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ package_id: 'pkg-archived' })
+              });
+
+              // 4. Delete from packages table
+              await fetch(`${SUPABASE_URL}/rest/v1/packages?id=eq.${encodeURIComponent(targetId)}`, {
+                method: 'DELETE',
+                headers: {
+                  apikey: supabaseKey,
+                  Authorization: `Bearer ${supabaseKey}`
+                }
+              });
+            } catch (supaErr) {
+              console.error('[Supabase admin package delete error]', supaErr.message);
+            }
+          }
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: true }));
+        }
+
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'Unknown action' }));
+      } catch (err) {
+        console.error('[API /api/admin/package error]', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: err.message }));
+      }
+    }
+
     // API Route: Check if an email is already a registered member
     if ((req.method === 'GET' || req.method === 'POST') && pathname === '/api/auth/check-member') {
       try {

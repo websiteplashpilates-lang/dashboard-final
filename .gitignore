@@ -5,3 +5,4 @@ dist/
 *.log
 outbox/receipts/*.html
 scratch/
+plash-landing/

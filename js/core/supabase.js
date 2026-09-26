@@ -169,6 +169,18 @@ export async function dbUpdatePackage(pkgId, updates) {
  * Delete a package from Supabase (admin only).
  */
 export async function dbDeletePackage(pkgId) {
+  const baseUrl = getProxyBaseUrl();
+  if (baseUrl !== null) {
+    try {
+      const res = await fetch(`${baseUrl}/api/admin/package`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', packageId: pkgId })
+      });
+      if (res.ok) return true;
+    } catch (_) {}
+  }
+
   const client = getSupabase();
   if (!client) return null;
 
