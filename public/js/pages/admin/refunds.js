@@ -299,7 +299,8 @@ export async function render(container) {
 
         // Coach Declination Details
         const tdReason = createElement('td', { style: 'padding: 14px 16px; max-width: 280px;' });
-        const coachName = row.decidedBy || 'Physicq 57 Coach';
+        const rawCoach = row.decidedBy || 'Physicq 57 Coach';
+        const coachName = rawCoach.replace(/Ananya Deshmukh\s*(\(Physicq 57 Coach\))?/i, 'Physicq 57 Coach').trim();
         const decDate = row.decidedAt ? formatDate(row.decidedAt) : 'Recently';
         const reasonText = row.decisionReason || 'Partner coach safety assessment review';
         tdReason.innerHTML = `
@@ -407,7 +408,7 @@ function openRefundModal(row, onSaved) {
       <strong>Partner Declination Reason:</strong> "${escapeHtml(row.decisionReason || 'Partner coach safety assessment')}"
     </div>
     <div style="font-size: 11px; color: var(--ink-50); margin-top: 4px;">
-      Declined by ${escapeHtml(row.decidedBy || 'Physicq 57 Coach')} on ${row.decidedAt ? formatDateTime(row.decidedAt) : 'Recently'}
+      Declined by ${escapeHtml((row.decidedBy || 'Physicq 57 Coach').replace(/Ananya Deshmukh\s*(\(Physicq 57 Coach\))?/i, 'Physicq 57 Coach').trim())} on ${row.decidedAt ? formatDateTime(row.decidedAt) : 'Recently'}
     </div>
   `;
   content.appendChild(summaryBox);

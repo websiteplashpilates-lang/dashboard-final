@@ -13,7 +13,7 @@
     "healthNotes": "Standard health declaration",
     "createdAt": "2026-09-25T13:51:08.521Z",
     "decidedAt": "2026-09-25T23:21:43.167Z",
-    "decidedBy": "Ananya Deshmukh (Physicq 57 Coach)",
+    "decidedBy": "Physicq 57 Coach",
     "decisionReason": "jnljk",
     "adminNotified": true,
     "refundStatus": "refunded",
@@ -38,7 +38,7 @@
     "healthNotes": "Standard health declaration",
     "createdAt": "2026-09-25T05:45:07.055Z",
     "decidedAt": "2026-09-25T23:21:46.411Z",
-    "decidedBy": "Ananya Deshmukh (Physicq 57 Coach)",
+    "decidedBy": "Physicq 57 Coach",
     "decisionReason": null,
     "adminNotified": true
   },
@@ -66,7 +66,7 @@
     "status": "declined",
     "createdAt": "2026-09-23T02:07:53.961Z",
     "decisionReason": "High impact barre contraindicated for lumbar herniation",
-    "decidedAt": "2026-09-26T07:51:24.774Z",
+    "decidedAt": "2026-09-26T14:31:07.571Z",
     "decidedBy": "Lead Coach Ritika",
     "adminNotified": true
   },
@@ -76,7 +76,7 @@
     "status": "accepted",
     "createdAt": "2026-09-23T02:07:53.825Z",
     "decisionReason": null,
-    "decidedAt": "2026-09-26T07:51:24.647Z",
+    "decidedAt": "2026-09-26T14:31:07.440Z",
     "decidedBy": "Lead Coach Sneha",
     "adminNotified": true
   },
@@ -94,7 +94,7 @@
     "healthNotes": "Standard health declaration",
     "createdAt": "2026-09-22T22:45:19.271+00:00",
     "decidedAt": "2026-09-22T23:53:39.466Z",
-    "decidedBy": "Ananya Deshmukh (Physicq 57 Coach)",
+    "decidedBy": "Physicq 57 Coach",
     "decisionReason": "mnb hb",
     "adminNotified": true
   },

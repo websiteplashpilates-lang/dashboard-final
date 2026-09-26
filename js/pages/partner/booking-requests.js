@@ -117,7 +117,7 @@ export async function render(container) {
         approveBtn.addEventListener('click', async () => {
           try {
             approveBtn.disabled = true;
-            await store.acceptPartnerReview(rev.id, 'Ananya Deshmukh (Physicq 57 Coach)');
+            await store.acceptPartnerReview(rev.id, 'Physicq 57 Coach');
             showToast(`Approved ${rev.memberName} for Barre programming. Admin notified.`, 'success');
             render(container);
           } catch (err) {
@@ -190,7 +190,7 @@ function openPartnerDeclineModal(review, onComplete) {
     try {
       declineConfirmBtn.disabled = true;
       declineConfirmBtn.textContent = 'Submitting...';
-      await store.declinePartnerReview(review.id, reason, 'Ananya Deshmukh (Physicq 57 Coach)');
+      await store.declinePartnerReview(review.id, reason, 'Physicq 57 Coach');
       modal.close();
       showToast(`Member declined with recorded reason. Studio Admin notified.`, 'info');
       if (onComplete) onComplete();

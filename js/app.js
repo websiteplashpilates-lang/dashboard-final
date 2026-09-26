@@ -40,16 +40,16 @@ import * as adminPackages from './pages/admin/packages.js';
 import * as adminBookings from './pages/admin/bookings.js?v=123';
 import * as adminPayments from './pages/admin/payments.js';
 import * as adminPartnerApprovals from './pages/admin/partner-approvals.js?v=108';
-import * as adminRefunds from './pages/admin/refunds.js?v=110';
+import * as adminRefunds from './pages/admin/refunds.js?v=215';
 
 // Page imports — Trainer Portal
 import * as trainerDashboard from './pages/trainer/dashboard.js?v=122';
 
 // Page imports — Partner Portal (Physicq 57)
-import * as partnerRequests from './pages/partner/booking-requests.js?v=210';
+import * as partnerRequests from './pages/partner/booking-requests.js?v=215';
 import * as partnerRoster from './pages/partner/roster.js';
 import * as partnerMemberDetail from './pages/partner/member-detail.js';
-import * as partnerSchedule from './pages/partner/schedule.js?v=111';
+import * as partnerSchedule from './pages/partner/schedule.js?v=215';
 
 // Page imports — Legal & Compliance
 import * as legalPrivacy from './pages/legal/privacy-policy.js';

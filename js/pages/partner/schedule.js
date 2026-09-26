@@ -245,13 +245,7 @@ function openSessionRosterModal(session) {
       const notes = createElement('div', { style: 'font-size: 11px; color: var(--ink-80);', text: health ? `Experience: ${health.experience} • ${health.injuries || 'No injury notes'}` : 'No profile' });
       info.append(name, notes);
 
-      const link = createElement('a', {
-        className: 'btn btn-outline btn-sm',
-        attributes: { href: `#/partner/members/${b.memberId}` },
-        text: 'Directives'
-      });
-
-      item.append(info, link);
+      item.append(info);
       list.appendChild(item);
     });
     content.appendChild(list);
