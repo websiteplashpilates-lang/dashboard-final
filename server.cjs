@@ -1140,7 +1140,10 @@ try {
 
     const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost:3333'}`);
     let pathname = urlObj.pathname;
-    if (pathname.includes('server.js') || pathname.includes('[...path]') || pathname === '/api' || pathname === '') {
+    const pathParam = urlObj.searchParams.get('__path');
+    if (pathParam) {
+      pathname = `/api/${pathParam.replace(/^\/+/, '')}`;
+    } else if (pathname.includes('server.js') || pathname.includes('[...path]') || pathname === '/api' || pathname === '') {
       if (req.headers['x-matched-path']) {
         pathname = req.headers['x-matched-path'];
       } else if (req.query && req.query.path) {
