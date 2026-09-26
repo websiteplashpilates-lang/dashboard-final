@@ -1180,7 +1180,7 @@ export function addClassSession(data) {
     Object.assign(existing, data, { capacity, durationMinutes, startsAt, date, time });
     saveClassSessionsCache();
     events.emit(EVENT.DATA_MUTATED, { source: 'update_session', session: existing });
-    dbUpdateClassSession(existing.id, existing).catch(() => {});
+    existing._promise = dbUpdateClassSession(existing.id, existing).catch(() => {});
     return existing;
   }
 
@@ -1204,13 +1204,16 @@ export function addClassSession(data) {
   saveClassSessionsCache();
   events.emit(EVENT.DATA_MUTATED, { source: 'add_session', session });
 
-  dbCreateClassSession(session).then(remote => {
+  session._promise = dbCreateClassSession(session).then(remote => {
     if (remote && remote.id) {
       session.id = remote.id;
       saveClassSessionsCache();
+      events.emit(EVENT.DATA_MUTATED, { source: 'session_persisted', session });
     }
+    return remote;
   }).catch(err => {
     console.warn('[Supabase addClassSession warning]', err);
+    return null;
   });
 
   return session;
@@ -1220,7 +1223,7 @@ export function addClassSession(data) {
  * Update a class session (admin).
  * @param {string} sessionId
  * @param {Object} data
- * @returns {{session: Object, warning: string|null}}
+ * @returns {{session: Object, warning: string|null, _promise: Promise}}
  */
 export function updateClassSession(sessionId, data) {
   const session = getClassSessionById(sessionId);
@@ -1246,11 +1249,11 @@ export function updateClassSession(sessionId, data) {
   saveClassSessionsCache();
   events.emit(EVENT.DATA_MUTATED, { source: 'update_session', session });
 
-  dbUpdateClassSession(sessionId, data).catch(err => {
+  const promise = dbUpdateClassSession(sessionId, data).catch(err => {
     console.warn('[Supabase updateClassSession warning]', err);
   });
 
-  return { session, warning };
+  return { session, warning, _promise: promise };
 }
 
 /**
@@ -1305,7 +1308,9 @@ export async function syncClassSessions() {
   try {
     const remote = await dbGetClassSessions();
     if (Array.isArray(remote)) {
-      state.classSessions = remote;
+      const remoteIds = new Set(remote.map(r => r.id));
+      const pendingLocal = state.classSessions.filter(s => s && s.id && !remoteIds.has(s.id));
+      state.classSessions = [...remote, ...pendingLocal];
       saveClassSessionsCache();
       events.emit(EVENT.DATA_MUTATED, { source: 'sync_class_sessions' });
     }

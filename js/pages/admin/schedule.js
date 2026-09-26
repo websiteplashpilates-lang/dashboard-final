@@ -649,11 +649,12 @@ function openScheduleModal(session, defaultDate, onSuccess) {
 
   let isSubmitting = false;
 
-  content.addEventListener('submit', (e) => {
+  content.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
     isSubmitting = true;
     saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
 
     const selectedDisc = store.getDisciplineById(discSelect.value);
     const defaultTrainerId = (session && session.trainerId) || (store.getTrainers()[0]?.id) || 'trainer-001';
@@ -669,10 +670,12 @@ function openScheduleModal(session, defaultDate, onSuccess) {
 
     try {
       if (isEditing) {
-        store.updateClassSession(session.id, payload);
+        const res = store.updateClassSession(session.id, payload);
+        if (res && res._promise) await res._promise.catch(() => {});
         showToast('Class session updated successfully.', 'success');
       } else {
-        store.addClassSession(payload);
+        const newSess = store.addClassSession(payload);
+        if (newSess && newSess._promise) await newSess._promise.catch(() => {});
         showToast('New class scheduled and open for booking.', 'success');
       }
       modal.close();
@@ -680,6 +683,7 @@ function openScheduleModal(session, defaultDate, onSuccess) {
     } catch (err) {
       showToast(err.message, 'error');
       saveBtn.disabled = false;
+      saveBtn.textContent = isEditing ? 'Save Changes' : 'Schedule Class';
       isSubmitting = false;
     }
   });

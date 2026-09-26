@@ -2482,18 +2482,47 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
     }
 
     // API Route: Authoritative Class Sessions Retrieval from Server JSON Storage & Supabase
+    // Helper to safely write class sessions file without crashing on Lambda read-only FS
+    function safeWriteClassSessionsFile(filePath, data) {
+      try {
+        const dir = path.dirname(filePath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(filePath, data, 'utf-8');
+      } catch (_) {
+        try {
+          fs.writeFileSync(path.join('/tmp', path.basename(filePath)), data, 'utf-8');
+        } catch (__) {}
+      }
+    }
+
+    function safeReadClassSessionsFile(filePath) {
+      let sessions = [];
+      try {
+        if (fs.existsSync(filePath)) {
+          sessions = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        }
+      } catch (_) {}
+      try {
+        const tmpPath = path.join('/tmp', path.basename(filePath));
+        if (fs.existsSync(tmpPath)) {
+          const tmp = JSON.parse(fs.readFileSync(tmpPath, 'utf-8'));
+          if (Array.isArray(tmp) && tmp.length > 0) {
+            tmp.forEach(ts => {
+              const idx = sessions.findIndex(s => s.id === ts.id);
+              if (idx >= 0) sessions[idx] = { ...sessions[idx], ...ts };
+              else sessions.push(ts);
+            });
+          }
+        }
+      } catch (_) {}
+      return Array.isArray(sessions) ? sessions : [];
+    }
+
     if (req.method === 'GET' && pathname === '/api/class-sessions') {
       try {
         const classSessionsFilePath = path.join(__dirname, 'data', 'class_sessions.json');
-        let localSessions = [];
-        if (fs.existsSync(classSessionsFilePath)) {
-          try {
-            localSessions = JSON.parse(fs.readFileSync(classSessionsFilePath, 'utf-8'));
-          } catch (_) {}
-        }
-        if (!Array.isArray(localSessions)) localSessions = [];
+        let localSessions = safeReadClassSessionsFile(classSessionsFilePath);
 
-        // Safe background sync with Supabase (non-blocking)
         // Safe sync with Supabase (authoritative)
         try {
           const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
@@ -2538,9 +2567,7 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
                   };
                 });
                 localSessions = normalizedRemote;
-                const dataDir = path.join(__dirname, 'data');
-                if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-                fs.writeFileSync(classSessionsFilePath, JSON.stringify(localSessions, null, 2));
+                safeWriteClassSessionsFile(classSessionsFilePath, JSON.stringify(localSessions, null, 2));
               }
             }
           }
@@ -2564,13 +2591,7 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
         const { action, session, sessionId, patch } = body;
         const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
         const classSessionsFilePath = path.join(__dirname, 'data', 'class_sessions.json');
-        let localSessions = [];
-        if (fs.existsSync(classSessionsFilePath)) {
-          try {
-            localSessions = JSON.parse(fs.readFileSync(classSessionsFilePath, 'utf-8'));
-          } catch (_) {}
-        }
-        if (!Array.isArray(localSessions)) localSessions = [];
+        let localSessions = safeReadClassSessionsFile(classSessionsFilePath);
 
         if (action === 'create' || action === 'batch_create') {
           const sessionsToInsert = Array.isArray(session) ? session : [session];
@@ -2619,34 +2640,38 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
             }
           });
 
-          const dataDir = path.join(__dirname, 'data');
-          if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-          fs.writeFileSync(classSessionsFilePath, JSON.stringify(localSessions, null, 2));
+          safeWriteClassSessionsFile(classSessionsFilePath, JSON.stringify(localSessions, null, 2));
 
-          // Authoritative Supabase sync attempt
+          // Authoritative Supabase sync
           if (SUPABASE_URL && supabaseKey) {
-            const supabaseRows = newRows.map(r => ({
-              id: r.id,
-              title: r.title || 'Studio Session',
-              discipline_id: r.discipline_id || r.disciplineId || 'disc-pilates',
-              trainer_id: null,
-              start_time: r.start_time || r.startsAt,
-              end_time: r.end_time || new Date(new Date(r.start_time || r.startsAt).getTime() + (r.durationMinutes || 60) * 60000).toISOString(),
-              capacity: Math.min(6, parseInt(r.capacity, 10) || 6),
-              status: r.status || 'scheduled'
-            }));
-            fetch(`${SUPABASE_URL}/rest/v1/class_sessions`, {
-              method: 'POST',
-              headers: {
-                apikey: supabaseKey,
-                Authorization: `Bearer ${supabaseKey}`,
-                'Content-Type': 'application/json',
-                Prefer: 'return=representation'
-              },
-              body: JSON.stringify(supabaseRows)
-            }).then(res => {
-              if (!res.ok) res.text().then(t => console.error('[Supabase class_sessions insert error]', res.status, t));
-            }).catch(() => {});
+            try {
+              const supabaseRows = newRows.map(r => ({
+                id: r.id,
+                title: r.title || 'Studio Session',
+                discipline_id: r.discipline_id || r.disciplineId || 'disc-pilates',
+                trainer_id: null,
+                start_time: r.start_time || r.startsAt,
+                end_time: r.end_time || new Date(new Date(r.start_time || r.startsAt).getTime() + (r.durationMinutes || 60) * 60000).toISOString(),
+                capacity: Math.min(6, parseInt(r.capacity, 10) || 6),
+                status: r.status || 'scheduled'
+              }));
+              const supaRes = await fetch(`${SUPABASE_URL}/rest/v1/class_sessions`, {
+                method: 'POST',
+                headers: {
+                  apikey: supabaseKey,
+                  Authorization: `Bearer ${supabaseKey}`,
+                  'Content-Type': 'application/json',
+                  Prefer: 'return=representation'
+                },
+                body: JSON.stringify(supabaseRows)
+              });
+              if (!supaRes.ok) {
+                const errText = await supaRes.text();
+                console.error('[Supabase class_sessions insert error]', supaRes.status, errText);
+              }
+            } catch (supaErr) {
+              console.error('[Supabase class_sessions fetch exception]', supaErr.message);
+            }
           }
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -2675,36 +2700,34 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
               localSessions[idx].trainer_id = patch.trainerId;
               localSessions[idx].trainerId = patch.trainerId;
             }
-            const dataDir = path.join(__dirname, 'data');
-            if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-            fs.writeFileSync(classSessionsFilePath, JSON.stringify(localSessions, null, 2));
+            safeWriteClassSessionsFile(classSessionsFilePath, JSON.stringify(localSessions, null, 2));
           }
 
-          if (SUPABASE_URL && supabaseKey) {
-            const cleanPatch = {};
-            if (patch.title) cleanPatch.title = patch.title;
-            if (patch.disciplineId || patch.discipline_id) cleanPatch.discipline_id = patch.disciplineId || patch.discipline_id;
-            if (patch.trainerId !== undefined || patch.trainer_id !== undefined) cleanPatch.trainer_id = patch.trainerId || patch.trainer_id;
-            if (patch.capacity) cleanPatch.capacity = Math.min(6, parseInt(patch.capacity, 10));
-            if (patch.status) cleanPatch.status = patch.status;
-            if (patch.date && patch.time) {
-              const dur = patch.durationMinutes || 60;
-              const startTime = `${patch.date}T${patch.time}:00+05:30`;
-              cleanPatch.start_time = startTime;
-              cleanPatch.end_time = new Date(new Date(startTime).getTime() + dur * 60000).toISOString();
-            }
+          if (SUPABASE_URL && supabaseKey && patch) {
+            try {
+              const cleanPatch = {};
+              if (patch.title) cleanPatch.title = patch.title;
+              if (patch.disciplineId || patch.discipline_id) cleanPatch.discipline_id = patch.disciplineId || patch.discipline_id;
+              if (patch.trainerId !== undefined || patch.trainer_id !== undefined) cleanPatch.trainer_id = patch.trainerId || patch.trainer_id;
+              if (patch.capacity) cleanPatch.capacity = Math.min(6, parseInt(patch.capacity, 10));
+              if (patch.status) cleanPatch.status = patch.status;
+              if (patch.date && patch.time) {
+                const dur = patch.durationMinutes || 60;
+                const startTime = `${patch.date}T${patch.time}:00+05:30`;
+                cleanPatch.start_time = startTime;
+                cleanPatch.end_time = new Date(new Date(startTime).getTime() + dur * 60000).toISOString();
+              }
 
-            fetch(`${SUPABASE_URL}/rest/v1/class_sessions?id=eq.${encodeURIComponent(targetId)}`, {
-              method: 'PATCH',
-              headers: {
-                apikey: supabaseKey,
-                Authorization: `Bearer ${supabaseKey}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(cleanPatch)
-            }).then(res => {
-              if (!res.ok) res.text().then(t => console.error('[Supabase class_sessions patch error]', res.status, t));
-            }).catch(() => {});
+              await fetch(`${SUPABASE_URL}/rest/v1/class_sessions?id=eq.${encodeURIComponent(targetId)}`, {
+                method: 'PATCH',
+                headers: {
+                  apikey: supabaseKey,
+                  Authorization: `Bearer ${supabaseKey}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(cleanPatch)
+              });
+            } catch (_) {}
           }
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -2714,18 +2737,18 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
         if (action === 'delete') {
           const targetId = sessionId || (session && session.id);
           localSessions = localSessions.filter(ls => ls.id !== targetId);
-          const dataDir = path.join(__dirname, 'data');
-          if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-          fs.writeFileSync(classSessionsFilePath, JSON.stringify(localSessions, null, 2));
+          safeWriteClassSessionsFile(classSessionsFilePath, JSON.stringify(localSessions, null, 2));
 
           if (SUPABASE_URL && supabaseKey) {
-            fetch(`${SUPABASE_URL}/rest/v1/class_sessions?id=eq.${encodeURIComponent(targetId)}`, {
-              method: 'DELETE',
-              headers: {
-                apikey: supabaseKey,
-                Authorization: `Bearer ${supabaseKey}`
-              }
-            }).catch(() => {});
+            try {
+              await fetch(`${SUPABASE_URL}/rest/v1/class_sessions?id=eq.${encodeURIComponent(targetId)}`, {
+                method: 'DELETE',
+                headers: {
+                  apikey: supabaseKey,
+                  Authorization: `Bearer ${supabaseKey}`
+                }
+              });
+            } catch (_) {}
           }
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
