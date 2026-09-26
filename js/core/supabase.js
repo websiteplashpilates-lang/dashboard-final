@@ -737,19 +737,18 @@ export async function dbCancelBooking(bookingId, options = {}) {
  */
 export async function dbMarkAttendance(bookingId, status, options = {}) {
   const client = getSupabase();
-  const dbStatus = status === 'completed' ? 'completed' : status;
+  const dbStatus = status === 'completed' ? 'attended' : (status === 'upcoming' ? 'confirmed' : status);
 
   if (client) {
     try {
-      const { error } = await client
+      await client
         .from('bookings')
         .update({ status: dbStatus })
         .eq('id', bookingId);
-      if (!error && !options.refundCredit) return true;
     } catch (_) {}
   }
 
-  // Authoritative server proxy fallback
+  // Authoritative server proxy fallback (syncs cache, credit waiver, and fallback matching)
   try {
     const baseUrl = typeof window !== 'undefined' ? '' : 'http://127.0.0.1:3333';
     await fetch(`${baseUrl}/api/member/booking-action`, {
@@ -758,7 +757,7 @@ export async function dbMarkAttendance(bookingId, status, options = {}) {
       body: JSON.stringify({
         action: 'attendance',
         bookingId,
-        status: dbStatus,
+        status,
         refundCredit: !!options.refundCredit,
         reason: options.reason || ''
       })

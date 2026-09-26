@@ -1699,6 +1699,12 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
           return JSON.parse(fs.readFileSync(p, 'utf-8')) || [];
         }
       } catch (_) {}
+      try {
+        const tmpPath = path.join('/tmp', 'bookings.json');
+        if (fs.existsSync(tmpPath)) {
+          return JSON.parse(fs.readFileSync(tmpPath, 'utf-8')) || [];
+        }
+      } catch (_) {}
       return [];
     }
 
@@ -1707,7 +1713,11 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
         const dataDir = path.join(__dirname, 'data');
         if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
         fs.writeFileSync(path.join(dataDir, 'bookings.json'), JSON.stringify(list, null, 2));
-      } catch (_) {}
+      } catch (_) {
+        try {
+          fs.writeFileSync(path.join('/tmp', 'bookings.json'), JSON.stringify(list, null, 2));
+        } catch (_) {}
+      }
     }
 
     // API Route: Authoritative Booking Actions (Create, Cancel, Attendance, Barre Approval)
@@ -1941,7 +1951,7 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
 
           // Update local bookings file
           const localBookings = getBookingsFromFile();
-          const target = localBookings.find(b => b.id === bookingId);
+          const target = localBookings.find(b => b.id === bookingId || (body.memberId && (b.member_id === body.memberId || b.memberId === body.memberId) && (b.session_id === body.sessionId || b.sessionId === body.sessionId)));
           if (target) {
             target.status = patch.status;
             target.attendance_status = patch.status;
@@ -1961,43 +1971,68 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
               const bLookup = await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${encodeURIComponent(bookingId)}&select=pass_id`, {
                 headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
               });
+              let targetPassId = null;
               if (bLookup.ok) {
                 const bData = await bLookup.json();
-                const targetPassId = bData && bData[0] ? bData[0].pass_id : null;
-                if (targetPassId) {
-                  const credRes = await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(targetPassId)}&order=created_at.desc&limit=1`, {
-                    headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
-                  });
-                  if (credRes.ok) {
-                    const creds = await credRes.json();
-                    if (creds && creds[0]) {
-                      await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?id=eq.${creds[0].id}`, {
-                        method: 'PATCH',
-                        headers: {
-                          apikey: supabaseKey,
-                          Authorization: `Bearer ${supabaseKey}`,
-                          'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ remaining_credits: creds[0].remaining_credits + 1 })
-                      });
-                    }
+                targetPassId = bData && bData[0] ? bData[0].pass_id : null;
+              }
+              if (!targetPassId && target) {
+                targetPassId = target.pass_id || target.passId;
+              }
+              if (targetPassId) {
+                const credRes = await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(targetPassId)}&order=created_at.desc&limit=1`, {
+                  headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+                });
+                if (credRes.ok) {
+                  const creds = await credRes.json();
+                  if (creds && creds[0]) {
+                    await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?id=eq.${creds[0].id}`, {
+                      method: 'PATCH',
+                      headers: {
+                        apikey: supabaseKey,
+                        Authorization: `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({ remaining_credits: creds[0].remaining_credits + 1 })
+                    });
                   }
                 }
               }
             } catch (_) {}
           }
 
-          try {
-            await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${encodeURIComponent(bookingId)}`, {
-              method: 'PATCH',
-              headers: {
-                apikey: supabaseKey,
-                Authorization: `Bearer ${supabaseKey}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(patch)
-            });
-          } catch (_) {}
+          // Translate to Supabase enum ('completed' -> 'attended', 'upcoming' -> 'confirmed')
+          const supaStatus = status === 'completed' ? 'attended' : (status === 'upcoming' ? 'confirmed' : status);
+          if (SUPABASE_URL && supabaseKey) {
+            try {
+              const pRes = await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${encodeURIComponent(bookingId)}`, {
+                method: 'PATCH',
+                headers: {
+                  apikey: supabaseKey,
+                  Authorization: `Bearer ${supabaseKey}`,
+                  'Content-Type': 'application/json',
+                  Prefer: 'return=representation'
+                },
+                body: JSON.stringify({ status: supaStatus })
+              });
+              const patchedData = pRes.ok ? await pRes.json() : null;
+
+              // Fallback: match by member_id and session_id if ID was re-generated locally
+              const tMemberId = (target && (target.member_id || target.memberId)) || body.memberId;
+              const tSessionId = (target && (target.session_id || target.sessionId)) || body.sessionId;
+              if ((!patchedData || patchedData.length === 0) && tMemberId && tSessionId) {
+                await fetch(`${SUPABASE_URL}/rest/v1/bookings?member_id=eq.${encodeURIComponent(tMemberId)}&session_id=eq.${encodeURIComponent(tSessionId)}`, {
+                  method: 'PATCH',
+                  headers: {
+                    apikey: supabaseKey,
+                    Authorization: `Bearer ${supabaseKey}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ status: supaStatus })
+                });
+              }
+            } catch (_) {}
+          }
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
           return res.end(JSON.stringify({ success: true }));
@@ -2052,15 +2087,28 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
             const bRes = await fetch(queryUrl, {
               headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
             });
-            if (bRes.ok) remoteBookings = await bRes.json();
+            if (bRes.ok) {
+              const rawRemote = await bRes.json();
+              if (Array.isArray(rawRemote)) {
+                remoteBookings = rawRemote.map(b => {
+                  let s = b.status;
+                  if (s === 'confirmed') s = 'upcoming';
+                  if (s === 'attended') s = 'completed';
+                  return { ...b, status: s };
+                });
+              }
+            }
           }
         } catch (_) {}
 
         // Merge remote and local bookings without duplicates
         const remoteIds = new Set((remoteBookings || []).map(b => b.id));
+        const remotePairKeys = new Set(
+          (remoteBookings || []).map(b => `${b.member_id || b.memberId}__${b.session_id || b.sessionId}`)
+        );
         const merged = [
           ...(remoteBookings || []),
-          ...localBookings.filter(b => !remoteIds.has(b.id))
+          ...localBookings.filter(b => !remoteIds.has(b.id) && !remotePairKeys.has(`${b.member_id || b.memberId}__${b.session_id || b.sessionId}`))
         ];
 
         // Filter by memberId if requested
