@@ -20,7 +20,7 @@ function copyRecursive(src, dest) {
   }
 }
 
-['index.html', 'site.webmanifest', 'css', 'js', 'assets'].forEach(item => {
+['index.html', 'site.webmanifest', 'favicon.ico', 'css', 'js', 'assets'].forEach(item => {
   const src = path.join(ROOT, item);
   const dest = path.join(PUBLIC, item);
   if (fs.existsSync(src)) {
