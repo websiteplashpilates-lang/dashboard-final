@@ -39,8 +39,8 @@ import * as adminSchedule from './pages/admin/schedule.js';
 import * as adminPackages from './pages/admin/packages.js';
 import * as adminBookings from './pages/admin/bookings.js?v=123';
 import * as adminPayments from './pages/admin/payments.js';
-import * as adminPartnerApprovals from './pages/admin/partner-approvals.js?v=108';
-import * as adminRefunds from './pages/admin/refunds.js?v=215';
+import * as adminPartnerApprovals from './pages/admin/partner-approvals.js?v=220';
+import * as adminRefunds from './pages/admin/refunds.js?v=220';
 
 // Page imports — Trainer Portal
 import * as trainerDashboard from './pages/trainer/dashboard.js?v=122';

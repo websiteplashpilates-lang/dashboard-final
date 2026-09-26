@@ -250,7 +250,7 @@ export async function render(container) {
             <th style="padding: 12px 16px; font-weight: 600; color: var(--ink-70);">Member</th>
             <th style="padding: 12px 16px; font-weight: 600; color: var(--ink-70);">Contact</th>
             <th style="padding: 12px 16px; font-weight: 600; color: var(--ink-70);">Package & Amount</th>
-            <th style="padding: 12px 16px; font-weight: 600; color: var(--ink-70);">Coach Declination Details</th>
+            <th style="padding: 12px 16px; font-weight: 600; color: var(--ink-70);">Declination Details</th>
             <th style="padding: 12px 16px; font-weight: 600; color: var(--ink-70);">Refund Status</th>
             <th style="padding: 12px 16px; font-weight: 600; color: var(--ink-70); text-align: right;">Action</th>
           </tr>
@@ -297,21 +297,15 @@ export async function render(container) {
           </div>
         `;
 
-        // Coach Declination Details
+        // Declination Details
         const tdReason = createElement('td', { style: 'padding: 14px 16px; max-width: 280px;' });
-        const rawCoach = row.decidedBy || 'Physicq 57 Coach';
-        const coachName = rawCoach.replace(/Ananya Deshmukh\s*(\(Physicq 57 Coach\))?/i, 'Physicq 57 Coach').trim();
         const decDate = row.decidedAt ? formatDate(row.decidedAt) : 'Recently';
-        const reasonText = row.decisionReason || 'Partner coach safety assessment review';
+        const reasonText = row.decisionReason || 'Partner safety assessment review';
         tdReason.innerHTML = `
-          <div style="font-size: 12px; color: #9A242B; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-            <i data-lucide="alert-triangle" style="width: 13px; height: 13px;"></i>
-            <span>${escapeHtml(coachName)}</span>
-          </div>
-          <div style="font-size: 12px; color: var(--ink); margin-top: 3px; font-style: italic; background: var(--stone); padding: 4px 8px; border-radius: 4px; border-left: 2px solid #C0392B;">
+          <div style="font-size: 12px; color: var(--ink); font-style: italic; background: var(--stone); padding: 6px 10px; border-radius: 4px; border-left: 3px solid #C0392B;">
             "${escapeHtml(reasonText)}"
           </div>
-          <div style="font-size: 11px; color: var(--ink-40); margin-top: 3px;">Declined on ${escapeHtml(decDate)}</div>
+          <div style="font-size: 11px; color: var(--ink-40); margin-top: 4px;">Declined on ${escapeHtml(decDate)}</div>
         `;
 
         // Refund Status Column
@@ -408,7 +402,7 @@ function openRefundModal(row, onSaved) {
       <strong>Partner Declination Reason:</strong> "${escapeHtml(row.decisionReason || 'Partner coach safety assessment')}"
     </div>
     <div style="font-size: 11px; color: var(--ink-50); margin-top: 4px;">
-      Declined by ${escapeHtml((row.decidedBy || 'Physicq 57 Coach').replace(/Ananya Deshmukh\s*(\(Physicq 57 Coach\))?/i, 'Physicq 57 Coach').trim())} on ${row.decidedAt ? formatDateTime(row.decidedAt) : 'Recently'}
+      Declined on ${row.decidedAt ? formatDateTime(row.decidedAt) : 'Recently'}
     </div>
   `;
   content.appendChild(summaryBox);

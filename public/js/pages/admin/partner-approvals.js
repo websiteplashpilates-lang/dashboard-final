@@ -250,7 +250,7 @@ export async function render(container) {
               "${rev.decisionReason || 'Partner coach determined attendee profile requires medical clearance or specialized modification.'}"
             </div>
             <div style="font-size: 11px; color: var(--ink-50); margin-top: 4px;">
-              Decision recorded by ${rev.decidedBy || 'Physicq 57 Coach'} on ${formatDate(rev.decidedAt || rev.createdAt)}.
+              Decision recorded on ${formatDate(rev.decidedAt || rev.createdAt)}.
             </div>
           `;
           card.appendChild(reasonAlert);
@@ -258,7 +258,7 @@ export async function render(container) {
           const acceptedNotice = createElement('div', {
             style: 'font-size: 12px; color: #2E5A44; font-weight: 500; margin-bottom: var(--space-2);'
           });
-          acceptedNotice.textContent = `✓ Safety verified and accepted by ${rev.decidedBy || 'Physicq 57 Coach'} on ${formatDate(rev.decidedAt || rev.createdAt)}. Member cleared for Barre sessions.`;
+          acceptedNotice.textContent = `✓ Safety verified and accepted on ${formatDate(rev.decidedAt || rev.createdAt)}. Member cleared for Barre sessions.`;
           card.appendChild(acceptedNotice);
         }
 
