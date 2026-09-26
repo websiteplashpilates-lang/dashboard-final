@@ -1109,20 +1109,7 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
   };
 }
 
-let EMBEDDED_INDEX_HTML = null;
-try {
-  const possiblePaths = [
-    path.join(__dirname, 'index.html'),
-    path.join(process.cwd(), 'index.html'),
-    path.join(__dirname, '..', 'index.html')
-  ];
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      EMBEDDED_INDEX_HTML = fs.readFileSync(p, 'utf8');
-      break;
-    }
-  }
-} catch (_) {}
+const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
 
 // 7. HTTP Server
   const requestHandler = async (req, res) => {
@@ -3279,7 +3266,15 @@ try {
 
     // Static File Serving
     let safePath = path.normalize(pathname).replace(/^(\.\.[\/\\])+/, '');
-    if (safePath === '/' || safePath === '') safePath = '/index.html';
+    if (safePath === '/' || safePath === '' || safePath === '/index.html') {
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
+      return res.end(EMBEDDED_INDEX_HTML);
+    }
 
     // Strict Security: block any access to hidden files (e.g. .env, .git, etc.)
     const normalizedParts = safePath.split(/[\/\\]/);
