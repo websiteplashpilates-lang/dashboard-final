@@ -3289,7 +3289,7 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
   };
 
   // Primary Server (Port 3333 ONLY - when running standalone)
-  if (!process.env.VERCEL) {
+  if (!process.env.VERCEL && require.main === module) {
     const server3333 = http.createServer(requestHandler);
     server3333.listen(3333, () => {
       console.log(`====================================================`);
