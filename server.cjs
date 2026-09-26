@@ -10,7 +10,20 @@ const path = require('path');
 const crypto = require('crypto');
 
 const PORT = process.env.PORT || 3333;
-const ROOT_DIR = __dirname;
+const ROOT_DIR = (() => {
+  const candidates = [
+    __dirname,
+    process.cwd(),
+    path.join(__dirname, '..'),
+    path.join(process.cwd(), '..')
+  ];
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(path.join(c, 'index.html'))) return c;
+    } catch (_) {}
+  }
+  return __dirname;
+})();
 
 // 1. Load environment variables from .env
 function loadEnv() {
@@ -3261,17 +3274,23 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
 
     fs.stat(filePath, (err, stats) => {
       if (err || !stats.isFile()) {
-        // SPA Fallback: serve index.html for unknown routes if not an asset
-        if (!path.extname(safePath)) {
-          const indexPath = path.join(ROOT_DIR, 'index.html');
-          return fs.readFile(indexPath, (idxErr, content) => {
-            if (idxErr) {
-              res.writeHead(404);
-              return res.end('Not Found');
-            }
-            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-            return res.end(content);
-          });
+        // SPA Fallback: serve index.html for unknown routes or if safePath is index.html
+        if (!path.extname(safePath) || safePath === '/index.html') {
+          const possibleIndexPaths = [
+            path.join(ROOT_DIR, 'index.html'),
+            path.join(process.cwd(), 'index.html'),
+            path.join(__dirname, 'index.html'),
+            path.join(__dirname, '..', 'index.html')
+          ];
+          for (const idxPath of possibleIndexPaths) {
+            try {
+              if (fs.existsSync(idxPath)) {
+                const content = fs.readFileSync(idxPath, 'utf8');
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                return res.end(content);
+              }
+            } catch (_) {}
+          }
         }
         res.writeHead(404, { 'Content-Type': 'text/plain' });
         return res.end('404 Not Found');
