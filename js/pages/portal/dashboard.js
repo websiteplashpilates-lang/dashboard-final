@@ -19,7 +19,11 @@ export async function render(container) {
 
   if (memberId) {
     try {
-      await store.fetchMemberPasses(memberId);
+      await Promise.all([
+        store.fetchMemberPasses(memberId).catch(() => {}),
+        store.syncBookings().catch(() => {}),
+        store.syncClassSessions().catch(() => {})
+      ]);
     } catch (_) {}
   }
 
@@ -122,9 +126,9 @@ export async function render(container) {
       text: 'Cancel'
     });
 
-    cancelBtn.addEventListener('click', () => {
+    cancelBtn.addEventListener('click', async () => {
       try {
-        store.cancelBooking(nextBooking.id);
+        await store.cancelBooking(nextBooking.id);
         showToast('Booking cancelled. Credit refunded to pass.', 'info');
         render(container);
       } catch (err) {

@@ -16,6 +16,12 @@ import { formatDateTime, formatDateShort } from '../../utils/format.js';
 
 export async function render(container) {
   clearChildren(container);
+
+  // Authoritative live sync of audit activity logs from Supabase & server
+  try {
+    await store.syncActivityLogs();
+  } catch (_) {}
+
   const page = createElement('div', { className: 'page-container' });
 
   // 1. Page Header

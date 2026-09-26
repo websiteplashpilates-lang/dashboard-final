@@ -4,6 +4,7 @@
  * Error Handling, and Supabase Live Connectivity.
  */
 
+process.env.NODE_ENV = 'test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import * as auth from '../js/core/auth.js';

@@ -32,35 +32,6 @@ export async function render(container) {
   header.append(title, subtitle);
   page.appendChild(header);
 
-  // Auto-reconcile any recently captured unfulfilled payment
-  if (memberId) {
-    try {
-      const reconRes = await fetch('/api/reconcile-recent-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ memberId, packageId: cart.getCartPackage()?.id })
-      });
-      if (reconRes.ok) {
-        const reconData = await reconRes.json();
-        if (reconData.success && reconData.reconciled) {
-          if (reconData.payment) store.addPayment(reconData.payment);
-          if (reconData.pass) store.addMemberPass(reconData.pass);
-          await store.fetchMemberPayments(memberId).catch(() => {});
-          await store.syncFromSupabase().catch(() => {});
-          cart.clearCart();
-          showToast('Payment verified and pass provisioned! Tax invoice generated.', 'success');
-          if (reconData.payment) {
-            openReceiptModal(reconData.payment);
-          }
-          window.location.hash = '#/portal/payments';
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn('[Auto-reconcile check]', e.message);
-    }
-  }
-
   const pkg = cart.getCartPackage();
 
   if (!pkg) {
@@ -247,6 +218,7 @@ export async function render(container) {
   // Waiver acceptance in cart (always starts unchecked, must be checked by user)
   const waiverContainer = createElement('div', { style: 'margin-top: var(--space-4);' });
   const waiverGate = createWaiverCheckbox({
+    packageItem: pkg,
     onChange: (checked) => {
       if (checked) {
         if (waiverWarning) waiverWarning.style.display = 'none';
@@ -332,7 +304,7 @@ export async function render(container) {
             id: resolvedOrderId,
             amount: parsed.amount || Math.round(finalPrice * 100),
             currency: parsed.currency || 'INR',
-            keyId: parsed.keyId || CONFIG.RAZORPAY.KEY_ID || 'rzp_test_SKQzTiiysg1aGG'
+            keyId: parsed.keyId || CONFIG.RAZORPAY.KEY_ID || ''
           };
         } else {
           const errMsg = parsed?.error?.description || parsed?.error?.message || (typeof parsed?.error === 'string' ? parsed.error : null) || parsed?.message || `HTTP ${orderRes.status}`;
@@ -342,8 +314,8 @@ export async function render(container) {
         lastError = e;
       }
 
-      if (!orderData || !orderData.orderId) {
-        const errDetail = (orderData && orderData.error) || (lastError && lastError.message) || 'Backend unreachable';
+      if (!orderData || !orderData.orderId || !orderData.keyId) {
+        const errDetail = (!orderData?.keyId ? 'Razorpay Key ID is missing from environment.' : null) || (orderData && orderData.error) || (lastError && lastError.message) || 'Backend unreachable';
         console.error('[Razorpay Order Error]', errDetail);
         showToast(`Razorpay Order creation error: ${errDetail}`, 'error');
         resetBtn();
@@ -467,14 +439,84 @@ export async function render(container) {
         };
 
         try {
-          const rzp = new window.Razorpay(options);
-          rzp.on('payment.failed', function (res) {
+          function showPaymentFailedModal(errorDetail) {
             if (pollInterval) {
               clearInterval(pollInterval);
               pollInterval = null;
             }
-            showToast(`Payment failed: ${res.error?.description || res.error?.reason || 'Transaction declined'}`, 'error');
             resetBtn();
+
+            const rawDesc = errorDetail || 'Your payment could not be processed.';
+            const displayDesc = rawDesc.includes('Payment failed') || rawDesc.includes('BAD_REQUEST')
+              ? 'Your transaction could not be completed by your bank or UPI provider.'
+              : rawDesc;
+
+            const modalContent = createElement('div', {
+              style: 'font-size: var(--text-sm); line-height: 1.6; color: var(--ink-80);'
+            });
+
+            modalContent.innerHTML = `
+              <div style="background: #fff1f2; border: 1.5px solid #fecdd3; padding: 14px 16px; border-radius: var(--radius-sm); color: #9f1239; margin-bottom: var(--space-4); display: flex; align-items: flex-start; gap: 12px;">
+                <i data-lucide="alert-circle" style="width: 20px; height: 20px; flex-shrink: 0; color: #e11d48; margin-top: 2px;"></i>
+                <div>
+                  <strong style="font-weight: var(--weight-bold); font-size: var(--text-sm); display: block; margin-bottom: 2px;">Payment Unsuccessful</strong>
+                  <span style="font-size: 13px; line-height: 1.5; color: #881337;">${displayDesc}</span>
+                </div>
+              </div>
+              <p style="margin-bottom: var(--space-3); font-size: 13px; color: var(--ink-80); line-height: 1.6;">
+                Don't worry — your selected package remains safely saved in your cart. Please try again with UPI (GPay/PhonePe/Paytm), Netbanking, or another debit/credit card.
+              </p>
+              <div style="background: var(--stone); border: 1px solid var(--ink-10); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 12px; color: var(--ink-70); line-height: 1.5;">
+                <strong style="color: var(--ink); display: block; margin-bottom: 4px;">Did your bank debit any amount?</strong>
+                If funds were deducted from your bank account during this attempt, Razorpay and your bank will automatically reverse the full amount within 24–48 hours.
+              </div>
+            `;
+
+            const cancelBtn = createElement('button', {
+              className: 'btn btn-secondary',
+              attributes: { type: 'button' },
+              style: 'flex: 1; justify-content: center;',
+              text: 'Cancel'
+            });
+
+            const retryBtn = createElement('button', {
+              className: 'btn btn-primary',
+              attributes: { type: 'button' },
+              style: 'flex: 1; justify-content: center; gap: 8px;',
+              innerHTML: '<i data-lucide="rotate-cw" style="width: 15px; height: 15px;"></i><span>Try Again</span>'
+            });
+
+            const failModal = openModal({
+              title: 'Payment Failed',
+              content: modalContent,
+              actions: [cancelBtn, retryBtn],
+              maxWidth: '520px'
+            });
+
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+              window.lucide.createIcons({ root: modalContent });
+              window.lucide.createIcons({ root: retryBtn });
+            }
+
+            cancelBtn.addEventListener('click', () => {
+              failModal.close();
+              resetBtn();
+            });
+
+            retryBtn.addEventListener('click', () => {
+              failModal.close();
+              resetBtn();
+              setTimeout(() => {
+                launchRazorpayCheckout();
+              }, 200);
+            });
+          }
+
+          const rzp = new window.Razorpay(options);
+          rzp.on('payment.failed', function (res) {
+            const errDetail = res.error?.description || res.error?.reason || 'Transaction declined';
+            showToast(`Payment failed: ${errDetail}`, 'error');
+            showPaymentFailedModal(errDetail);
           });
           rzp.open();
 
@@ -512,41 +554,7 @@ export async function render(container) {
                   return;
                 }
                 if (statusData.errorDescription) {
-                  clearInterval(pollInterval);
-                  pollInterval = null;
-                  resetBtn();
-                  const modalContent = createElement('div', { style: 'font-size: var(--text-sm); line-height: 1.6;' });
-                  modalContent.innerHTML = `
-                    <div style="background: #fff1f2; border: 1px solid #fecdd3; padding: 12px 14px; border-radius: 6px; color: #9f1239; font-weight: 600; margin-bottom: 14px;">
-                      ⚠️ Razorpay Error: ${statusData.errorDescription}
-                    </div>
-                    <p style="color: var(--ink-80); margin-bottom: 10px;">
-                      <strong>Why this happened:</strong> Your live Razorpay account security policy requires the website origin to match the domain registered on your Razorpay Dashboard. Because testing on <code>${window.location.origin}</code>, Razorpay's risk engine blocked the live charge.
-                    </p>
-                    <p style="color: var(--ink-80); margin-bottom: 10px;">
-                      <strong>Did you get charged?</strong> Razorpay marked this transaction as <code>failed</code>. Any temporary UPI debit will automatically reverse back to your bank account.
-                    </p>
-                    <div style="background: var(--stone); border-radius: 6px; padding: 10px 12px; font-size: 12px; color: var(--ink-70);">
-                      <strong>How to resolve:</strong><br>
-                      1. <em>For Local Testing:</em> Use Razorpay <strong>Test Key & Secret</strong> (<code>rzp_test_...</code>) which allows free local testing without domain restrictions.<br>
-                      2. <em>For Production:</em> Add your development or production URL to <strong>Razorpay Dashboard &gt; Account &amp; Settings &gt; Business Website Details</strong>.
-                    </div>
-                  `;
-
-                  const closeAlertBtn = createElement('button', {
-                    className: 'btn btn-primary btn-sm',
-                    attributes: { type: 'button' },
-                    text: 'Understood'
-                  });
-
-                  const errModal = openModal({
-                    title: 'Razorpay Live Payment Security Restriction',
-                    content: modalContent,
-                    actions: [closeAlertBtn],
-                    maxWidth: '560px'
-                  });
-
-                  closeAlertBtn.addEventListener('click', () => errModal.close());
+                  showPaymentFailedModal(statusData.errorDescription);
                 }
               }
             } catch (_) {}
@@ -580,14 +588,40 @@ export async function render(container) {
       }, 3000);
 
       // Instant acceptance modal so user is NEVER blocked from opening Razorpay
+      const waiverConfig = store.getWaiverConfigForPackage(pkg);
+      const isBarre = waiverConfig.type === 'barre';
+      const isCombined = waiverConfig.type === 'combined';
+
+      const promptTitle = isCombined
+        ? 'Dual Studio Waiver Agreement'
+        : isBarre
+          ? 'Physique 57 Studio Waiver'
+          : 'Plash Pilates Studio Waiver';
+
+      const declarationTitle = isCombined
+        ? 'Dual Studio Agreement — Plash Pilates & Physique 57 Barre'
+        : isBarre
+          ? 'Physique 57 / AMP Fitness LLP Customer Waiver & Policies'
+          : 'Plash Pilates Liability Waiver & Privacy Policy (v1.0)';
+
+      const declarationSummary = isCombined
+        ? 'I agree to the Plash Pilates health declaration & privacy policy and the Physique 57 / AMP Fitness LLP liability waiver and studio booking policies.'
+        : isBarre
+          ? 'I acknowledge the high-intensity nature of Physique 57 barre, declare I am in adequate health, and agree to the AMP Fitness LLP liability release and 12-hour cancellation policy.'
+          : 'I acknowledge the physical nature and inherent risks of Pilates and Sculpt Yoga, and affirm I am physically fit to participate in accordance with studio safety and privacy policies.';
+
+      const btnText = isCombined
+        ? 'I Agree to Both — Open Razorpay Gateway'
+        : 'I Agree — Open Razorpay Gateway';
+
       const modalBody = createElement('div', { style: 'font-size: var(--text-sm); line-height: 1.6; color: var(--ink-80);' }, [
         createElement('p', { style: 'margin-bottom: 12px;', text: 'To proceed with Razorpay checkout, please confirm your agreement to the studio safety declaration:' }),
         createElement('div', {
           style: 'background: var(--stone); border-radius: var(--radius-sm); padding: 12px; font-size: 12px; line-height: 1.5; margin-bottom: 16px; border: 1px solid var(--ink-10);'
         }, [
-          createElement('strong', { text: 'Plash Pilates Liability Waiver & Health Declaration (v1.0)' }),
+          createElement('strong', { text: declarationTitle }),
           createElement('br'),
-          createElement('span', { text: 'I acknowledge the physical nature and inherent risks of Pilates, Barre, and Sculpt Yoga, and affirm I am physically fit to participate.' })
+          createElement('span', { text: declarationSummary })
         ])
       ]);
 
@@ -595,14 +629,14 @@ export async function render(container) {
         className: 'btn btn-primary',
         attributes: { type: 'button' },
         style: 'width: 100%; justify-content: center;',
-        text: 'I Agree — Open Razorpay Gateway'
+        text: btnText
       });
 
       const waiverModal = openModal({
-        title: 'Safety Waiver Agreement',
+        title: promptTitle,
         content: modalBody,
         actions: [agreeBtn],
-        maxWidth: '520px'
+        maxWidth: '540px'
       });
 
       agreeBtn.addEventListener('click', () => {
@@ -638,4 +672,32 @@ export async function render(container) {
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
     window.lucide.createIcons({ root: container });
   }
+
+  // Non-blocking background reconciliation: check for any recently captured unfulfilled payment
+  if (memberId) {
+    fetch('/api/reconcile-recent-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memberId, packageId: pkg?.id })
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(async reconData => {
+        if (reconData && reconData.success && reconData.reconciled) {
+          if (reconData.payment) store.addPayment(reconData.payment);
+          if (reconData.pass) store.addMemberPass(reconData.pass);
+          await store.fetchMemberPayments(memberId).catch(() => {});
+          await store.syncFromSupabase().catch(() => {});
+          cart.clearCart();
+          showToast('Payment verified and pass provisioned! Tax invoice generated.', 'success');
+          if (reconData.payment) {
+            openReceiptModal(reconData.payment);
+          }
+          window.location.hash = '#/portal/payments';
+        }
+      })
+      .catch(e => {
+        console.warn('[Auto-reconcile check]', e.message);
+      });
+  }
 }
+

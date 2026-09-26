@@ -47,6 +47,32 @@ import {
 } from './supabase.js';
 
 /* ---- Pure Supabase State Containers (Zero mock data hardcoded) ---- */
+try {
+  if (typeof localStorage !== 'undefined') {
+    const mockCleared = localStorage.getItem('plash_mock_classes_purged_v3');
+    if (!mockCleared) {
+      localStorage.removeItem('plash_class_sessions_cache');
+      localStorage.removeItem('plash_recurring_rules_v1');
+      localStorage.setItem('plash_mock_classes_purged_v3', 'true');
+    }
+  }
+} catch (_) {}
+
+const DEFAULT_RECURRING_RULES = [];
+
+function loadInitialRecurringRules() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem('plash_recurring_rules_v1');
+      if (raw !== null) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    }
+  } catch (_) {}
+  return [];
+}
+
 const state = {
   studio:              structuredClone(seed.studio),
   disciplines:         structuredClone(seed.disciplines),
@@ -59,7 +85,7 @@ const state = {
   memberPassCredits:   [],
   bookings:            [],
   pauseRequests:       [],
-  waivers:             [],
+  waivers:             structuredClone(seed.waivers),
   waiverAcceptances:   [],
   partnerOrgs:         [],
   partnerUsers:        structuredClone(seed.partnerUsers),
@@ -68,118 +94,7 @@ const state = {
   payments:            [],
   adminUsers:          structuredClone(seed.adminUsers),
   activityLog:         [],
-  recurringRules: [
-    {
-      id: 'rule-001',
-      title: 'Monday Morning Reformer Foundations',
-      daysOfWeek: ['monday'],
-      time: '07:30',
-      disciplineId: 'disc-001',
-      trainerId: 'trainer-001',
-      capacity: 6,
-      durationMinutes: 60,
-      active: true,
-    },
-    {
-      id: 'rule-002',
-      title: 'Monday Dynamic Reformer Flow',
-      daysOfWeek: ['monday'],
-      time: '09:00',
-      disciplineId: 'disc-001',
-      trainerId: 'trainer-002',
-      capacity: 6,
-      durationMinutes: 60,
-      active: true,
-    },
-    {
-      id: 'rule-003',
-      title: 'Tuesday Sculpt Yoga Flow',
-      daysOfWeek: ['tuesday'],
-      time: '08:00',
-      disciplineId: 'disc-003',
-      trainerId: 'trainer-003',
-      capacity: 6,
-      durationMinutes: 60,
-      active: true,
-    },
-    {
-      id: 'rule-004',
-      title: 'Tuesday Core & Alignment Reformer',
-      daysOfWeek: ['tuesday'],
-      time: '10:00',
-      disciplineId: 'disc-001',
-      trainerId: 'trainer-001',
-      capacity: 6,
-      durationMinutes: 60,
-      active: true,
-    },
-    {
-      id: 'rule-005',
-      title: 'Wednesday Dynamic Reformer',
-      daysOfWeek: ['wednesday'],
-      time: '09:00',
-      disciplineId: 'disc-001',
-      trainerId: 'trainer-002',
-      capacity: 6,
-      durationMinutes: 60,
-      active: true,
-    },
-    {
-      id: 'rule-006',
-      title: 'Thursday Morning Reformer Foundations',
-      daysOfWeek: ['thursday'],
-      time: '07:30',
-      disciplineId: 'disc-001',
-      trainerId: 'trainer-001',
-      capacity: 6,
-      durationMinutes: 60,
-      active: true,
-    },
-    {
-      id: 'rule-007',
-      title: 'Friday Sculpt & Core Flow',
-      daysOfWeek: ['friday'],
-      time: '09:00',
-      disciplineId: 'disc-003',
-      trainerId: 'trainer-003',
-      capacity: 6,
-      durationMinutes: 60,
-      active: true,
-    },
-    {
-      id: 'rule-008',
-      title: 'Saturday Physicq 57 Barre Signature',
-      daysOfWeek: ['saturday'],
-      time: '08:30',
-      disciplineId: 'disc-002',
-      trainerId: 'trainer-004',
-      capacity: 6,
-      durationMinutes: 60,
-      active: true,
-    },
-    {
-      id: 'rule-009',
-      title: 'Saturday Physicq 57 Power Barre',
-      daysOfWeek: ['saturday'],
-      time: '10:30',
-      disciplineId: 'disc-002',
-      trainerId: 'trainer-004',
-      capacity: 6,
-      durationMinutes: 60,
-      active: true,
-    },
-    {
-      id: 'rule-010',
-      title: 'Sunday Restorative Reformer & Stretch',
-      daysOfWeek: ['sunday'],
-      time: '09:00',
-      disciplineId: 'disc-001',
-      trainerId: 'trainer-001',
-      capacity: 6,
-      durationMinutes: 60,
-      active: true,
-    },
-  ],
+  recurringRules:      loadInitialRecurringRules(),
 };
 
 // Normalize session date/time/duration fields for uniform access
@@ -271,11 +186,17 @@ export function saveMemberPassesCache() {
   } catch (_) {}
 }
 
-// Clear any stale local packages and registered members so front-end strictly matches Supabase
+// Purge obsolete mock packages, members, sessions, and recurring rules so front-end strictly matches Supabase live state
 try {
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem(STORAGE_KEY_PACKAGES);
     localStorage.removeItem(STORAGE_KEY_MEMBERS);
+    const mockCleared = localStorage.getItem('plash_mock_classes_purged_v3');
+    if (!mockCleared) {
+      localStorage.removeItem(STORAGE_KEY_CLASS_SESSIONS);
+      localStorage.removeItem('plash_recurring_rules_v1');
+      localStorage.setItem('plash_mock_classes_purged_v3', 'true');
+    }
   }
 } catch (_) {}
 
@@ -342,7 +263,7 @@ if (typeof window !== 'undefined') {
     if (e.key === STORAGE_KEY_CLASS_SESSIONS && e.newValue) {
       try {
         const updated = JSON.parse(e.newValue);
-        if (Array.isArray(updated) && updated.length > 0) {
+        if (Array.isArray(updated)) {
           state.classSessions = updated;
           events.emit(EVENT.DATA_MUTATED, { source: 'cross_tab_sync_sessions' });
         }
@@ -405,10 +326,8 @@ export async function syncFromSupabase() {
     ]);
 
     if (packages) state.packages = packages;
-    if (sessions && sessions.length > 0) {
-      const remoteIds = new Set(sessions.map(s => s.id));
-      const localOnly = state.classSessions.filter(ls => !remoteIds.has(ls.id) && !sessions.some(s => s.date === ls.date && s.time === ls.time && s.disciplineId === ls.disciplineId));
-      state.classSessions = [...sessions, ...localOnly];
+    if (Array.isArray(sessions)) {
+      state.classSessions = sessions;
       saveClassSessionsCache();
     }
     if (payments) {
@@ -450,7 +369,11 @@ export async function syncFromSupabase() {
       });
       state.memberPassCredits = allCredits;
     }
-    if (waivers && waivers.length > 0) state.waivers = waivers;
+    if (waivers && waivers.length > 0) {
+      const remoteIds = new Set(waivers.map(w => w.id));
+      const missing = seed.waivers.filter(sw => !remoteIds.has(sw.id));
+      state.waivers = [...waivers, ...missing];
+    }
     if (waiverAcceptances) state.waiverAcceptances = waiverAcceptances;
     if (healthProfiles) state.healthProfiles = healthProfiles;
     if (partnerOrgs && partnerOrgs.length > 0) state.partnerOrgs = partnerOrgs;
@@ -492,7 +415,19 @@ export function getStudio() { return state.studio; }
 export function getDisciplines() { return state.disciplines; }
 
 /** @param {string} id @returns {Object|undefined} */
-export function getDisciplineById(id) { return state.disciplines.find(d => d.id === id); }
+export function getDisciplineById(id) {
+  if (!id) return undefined;
+  const aliasMap = {
+    'disc-001': CONFIG.DISCIPLINES.PILATES,
+    'disc-002': CONFIG.DISCIPLINES.BARRE,
+    'disc-003': CONFIG.DISCIPLINES.SCULPT_YOGA,
+    'pilates': CONFIG.DISCIPLINES.PILATES,
+    'barre': CONFIG.DISCIPLINES.BARRE,
+    'sculpt': CONFIG.DISCIPLINES.SCULPT_YOGA,
+  };
+  const resolvedId = aliasMap[id] || id;
+  return state.disciplines.find(d => d.id === resolvedId || d.id === id);
+}
 
 /** @returns {Array} All trainers */
 export function getTrainers() { return state.trainers; }
@@ -506,8 +441,154 @@ export function getAdminUsers() { return state.adminUsers; }
 /** @returns {Array} All partner users */
 export function getPartnerUsers() { return state.partnerUsers; }
 
-/** @returns {Object|undefined} Current waiver */
-export function getCurrentWaiver() { return state.waivers.find(w => w.version === CONFIG.WAIVER_VERSION); }
+/** @returns {Array} All waivers */
+export function getAllWaivers() {
+  return state.waivers;
+}
+
+/** @param {string} id @returns {Object|undefined} */
+export function getWaiverById(id) {
+  return state.waivers.find(w => w.id === id || w.version === id);
+}
+
+/** @returns {Object|undefined} Current generic waiver */
+export function getCurrentWaiver() {
+  return state.waivers.find(w => w.id === 'waiver-plash-1.0' || w.type === 'plash') ||
+    state.waivers.find(w => w.version === CONFIG.WAIVER_VERSION) ||
+    state.waivers[0];
+}
+
+/**
+ * Checks whether a package contains Barre classes.
+ * @param {Object} pkg
+ * @returns {boolean}
+ */
+export function packageHasBarre(pkg) {
+  if (!pkg) return false;
+  if (pkg.disciplineId === CONFIG.DISCIPLINES.BARRE || pkg.discipline_id === CONFIG.DISCIPLINES.BARRE) return true;
+  if (pkg.id && String(pkg.id).toLowerCase().includes('barre')) return true;
+  if (pkg.name && String(pkg.name).toLowerCase().includes('barre')) return true;
+  if (pkg.disciplines && pkg.disciplines.some(d => d.disciplineId === CONFIG.DISCIPLINES.BARRE || (d.name && d.name.toLowerCase().includes('barre')))) return true;
+  if (pkg.sessionAllocations && pkg.sessionAllocations.some(a => a.disciplineId === CONFIG.DISCIPLINES.BARRE || (a.disciplineId && String(a.disciplineId).toLowerCase().includes('barre')))) return true;
+  if (pkg.session_allocations && pkg.session_allocations.some(a => a.disciplineId === CONFIG.DISCIPLINES.BARRE || (a.disciplineId && String(a.disciplineId).toLowerCase().includes('barre')))) return true;
+  return false;
+}
+
+/**
+ * Checks whether a package contains Plash classes (Pilates or Sculpt Yoga).
+ * @param {Object} pkg
+ * @returns {boolean}
+ */
+export function packageHasPlash(pkg) {
+  if (!pkg) return true;
+  if (pkg.disciplineId === CONFIG.DISCIPLINES.PILATES || pkg.disciplineId === CONFIG.DISCIPLINES.SCULPT_YOGA) return true;
+  if (pkg.discipline_id === CONFIG.DISCIPLINES.PILATES || pkg.discipline_id === CONFIG.DISCIPLINES.SCULPT_YOGA) return true;
+  if (pkg.id && (String(pkg.id).toLowerCase().includes('pilates') || String(pkg.id).toLowerCase().includes('yoga'))) return true;
+  if (pkg.name && (String(pkg.name).toLowerCase().includes('pilates') || String(pkg.name).toLowerCase().includes('yoga') || String(pkg.name).toLowerCase().includes('plash') || String(pkg.name).toLowerCase().includes('all-access') || String(pkg.name).toLowerCase().includes('signature'))) return true;
+  if (pkg.disciplines && pkg.disciplines.some(d => d.disciplineId !== CONFIG.DISCIPLINES.BARRE)) return true;
+  if (pkg.sessionAllocations && pkg.sessionAllocations.some(a => a.disciplineId !== CONFIG.DISCIPLINES.BARRE)) return true;
+  if (pkg.session_allocations && pkg.session_allocations.some(a => a.disciplineId !== CONFIG.DISCIPLINES.BARRE)) return true;
+  return false;
+}
+
+/**
+ * Resolve dynamic waiver configuration for package in cart.
+ * - Barre only -> Physique 57 / AMP Fitness LLP Customer Waiver
+ * - Plash only -> Plash Pilates Studio Member Liability Waiver & Privacy Policy
+ * - Combined (both) -> Dual Studio Waiver requiring acceptance of both
+ * @param {Object} pkg
+ * @returns {Object}
+ */
+export function getWaiverConfigForPackage(pkg) {
+  const hasBarre = packageHasBarre(pkg);
+  const hasPlash = packageHasPlash(pkg);
+
+  const plashWaiver = state.waivers.find(w => w.id === 'waiver-plash-1.0' || w.type === 'plash') || state.waivers[0] || {
+    id: 'waiver-plash-1.0',
+    version: '1.0',
+    type: 'plash',
+    title: 'Plash Pilates Studio Member Liability Waiver & Privacy Policy',
+    content: seed.PLASH_PILATES_WAIVER_TEXT
+  };
+
+  const barreWaiver = state.waivers.find(w => w.id === 'waiver-p57-1.0' || w.type === 'barre') || state.waivers[1] || {
+    id: 'waiver-p57-1.0',
+    version: '1.0',
+    type: 'barre',
+    title: 'Physique 57 / AMP Fitness LLP Customer Waiver & Policies',
+    content: seed.PHYSIQUE_57_WAIVER_TEXT
+  };
+
+  const combinedWaiver = state.waivers.find(w => w.id === 'waiver-combined-1.0' || w.type === 'combined') || {
+    id: 'waiver-combined-1.0',
+    version: '1.0',
+    type: 'combined',
+    title: 'Dual Studio Waiver — Plash Pilates & Physique 57 Barre',
+    content: `${plashWaiver.bodyText || plashWaiver.content}\n\n=========================================\n\n${barreWaiver.bodyText || barreWaiver.content}`
+  };
+
+  if (hasBarre && hasPlash) {
+    return {
+      type: 'combined',
+      waiverId: combinedWaiver.id,
+      title: 'Dual Studio Waiver (Plash Pilates & Physique 57 Barre)',
+      linkText: 'Dual Studio Waiver (Plash & Physique 57 Barre)',
+      waiver: combinedWaiver,
+      subWaivers: [
+        {
+          key: 'plash',
+          tabTitle: 'Plash Pilates Studio',
+          title: plashWaiver.title,
+          version: plashWaiver.version,
+          content: plashWaiver.bodyText || plashWaiver.content
+        },
+        {
+          key: 'barre',
+          tabTitle: 'Physique 57 Barre',
+          title: barreWaiver.title,
+          version: barreWaiver.version,
+          content: barreWaiver.bodyText || barreWaiver.content
+        }
+      ]
+    };
+  }
+
+  if (hasBarre) {
+    return {
+      type: 'barre',
+      waiverId: barreWaiver.id,
+      title: barreWaiver.title,
+      linkText: `Physique 57 Customer Waiver & Policies (v${barreWaiver.version})`,
+      waiver: barreWaiver,
+      subWaivers: [
+        {
+          key: 'barre',
+          tabTitle: 'Physique 57 Barre',
+          title: barreWaiver.title,
+          version: barreWaiver.version,
+          content: barreWaiver.bodyText || barreWaiver.content
+        }
+      ]
+    };
+  }
+
+  return {
+    type: 'plash',
+    waiverId: plashWaiver.id,
+    title: plashWaiver.title,
+    linkText: `Liability Waiver & Privacy Policy (v${plashWaiver.version})`,
+    waiver: plashWaiver,
+    subWaivers: [
+      {
+        key: 'plash',
+        tabTitle: 'Plash Pilates Studio',
+        title: plashWaiver.title,
+        version: plashWaiver.version,
+        content: plashWaiver.bodyText || plashWaiver.content
+      }
+    ]
+  };
+}
 
 /* ================================================================
    PRICING
@@ -982,9 +1063,15 @@ export function getRemainingCredits(memberId, disciplineId) {
     return true;
   });
   let totalRemaining = 0;
+  const aliasMap = {
+    'disc-001': CONFIG.DISCIPLINES.PILATES,
+    'disc-002': CONFIG.DISCIPLINES.BARRE,
+    'disc-003': CONFIG.DISCIPLINES.SCULPT_YOGA
+  };
+  const normDisciplineId = aliasMap[disciplineId] || disciplineId;
   for (const pass of activePasses) {
     const credits = getPassCredits(pass.id);
-    const credit = credits.find(c => c.disciplineId === disciplineId);
+    const credit = credits.find(c => c.disciplineId === disciplineId || c.disciplineId === normDisciplineId);
     if (credit) {
       totalRemaining += (credit.sessionsIncluded - credit.sessionsUsed);
     }
@@ -1038,7 +1125,9 @@ export function getMemberCredits(memberId) {
 export function getAllClassSessions() { return state.classSessions; }
 
 /** @param {string} id @returns {Object|undefined} */
-export function getClassSessionById(id) { return state.classSessions.find(s => s.id === id); }
+export function getClassSessionById(id) {
+  return state.classSessions.find(s => s.id === id || s.clientSessionId === id);
+}
 
 /**
  * Get upcoming sessions, optionally filtered.
@@ -1095,8 +1184,10 @@ export function addClassSession(data) {
     return existing;
   }
 
+  const localId = data.id || genId('session');
   const session = {
-    id: data.id || genId('session'),
+    id: localId,
+    clientSessionId: localId,
     ...data,
     date,
     time,
@@ -1168,7 +1259,7 @@ export function updateClassSession(sessionId, data) {
  * @param {string} sessionId
  * @returns {Object} Removed session
  */
-export function deleteClassSession(sessionId) {
+export async function deleteClassSession(sessionId) {
   const index = state.classSessions.findIndex(s => s.id === sessionId);
   if (index === -1) throw new Error('Class session not found');
   const session = state.classSessions[index];
@@ -1186,7 +1277,8 @@ export function deleteClassSession(sessionId) {
     const pass = getActiveMemberPass(b.memberId);
     if (pass) {
       const credit = state.memberPassCredits.find(
-        c => c.memberPassId === pass.id && c.disciplineId === session.disciplineId
+        c => (c.memberPassId === pass.id || c.passId === pass.id || c.pass_id === pass.id) &&
+             (c.disciplineId === session.disciplineId || c.discipline_id === session.disciplineId)
       );
       if (credit && credit.sessionsUsed > 0) credit.sessionsUsed -= 1;
     }
@@ -1197,7 +1289,7 @@ export function deleteClassSession(sessionId) {
   saveClassSessionsCache();
   events.emit(EVENT.DATA_MUTATED, { source: 'delete_session', sessionId });
 
-  dbDeleteClassSession(sessionId).catch(err => {
+  await dbDeleteClassSession(sessionId).catch(err => {
     console.warn('[Supabase deleteClassSession warning]', err);
   });
 
@@ -1206,28 +1298,16 @@ export function deleteClassSession(sessionId) {
 
 /**
  * Authoritative Supabase & Server query to sync live class sessions.
- * Never drops locally scheduled sessions or cached changes.
+ * Accurately reflects published database sessions.
  * @returns {Promise<Array>}
  */
 export async function syncClassSessions() {
   try {
-    // 1. Recover any sessions stored in local storage cache
-    const cached = getCachedClassSessions();
-    if (Array.isArray(cached) && cached.length > 0) {
-      cached.forEach(cs => {
-        if (!state.classSessions.some(ls => ls.id === cs.id || (ls.date === cs.date && ls.time === cs.time && (ls.disciplineId === cs.disciplineId || ls.discipline_id === cs.discipline_id)))) {
-          state.classSessions.push(cs);
-        }
-      });
-    }
-
-    // 2. Fetch authoritative remote sessions from server / Supabase
     const remote = await dbGetClassSessions();
-    if (Array.isArray(remote) && remote.length > 0) {
-      const remoteIds = new Set(remote.map(s => s.id));
-      const localOnly = state.classSessions.filter(ls => !remoteIds.has(ls.id) && !remote.some(s => s.date === ls.date && s.time === ls.time && (s.disciplineId === ls.disciplineId || s.discipline_id === ls.disciplineId)));
-      state.classSessions = [...remote, ...localOnly];
+    if (Array.isArray(remote)) {
+      state.classSessions = remote;
       saveClassSessionsCache();
+      events.emit(EVENT.DATA_MUTATED, { source: 'sync_class_sessions' });
     }
   } catch (err) {
     console.warn('[store.syncClassSessions error]', err);
@@ -1249,6 +1329,14 @@ export function getRecurringRuleById(id) {
   return state.recurringRules.find(r => r.id === id);
 }
 
+export function saveRecurringRulesCache() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('plash_recurring_rules_v1', JSON.stringify(state.recurringRules));
+    }
+  } catch (_) {}
+}
+
 /**
  * Add a new recurring timetable rule (admin).
  * @param {Object} data
@@ -1268,6 +1356,10 @@ export function addRecurringRule(data) {
     createdAt: new Date().toISOString()
   };
   state.recurringRules.push(rule);
+  saveRecurringRulesCache();
+  // Automatically generate matching calendar sessions so rule reflects in weekly timetable matrix immediately!
+  generateSessionsFromRules(4);
+  events.emit(EVENT.DATA_MUTATED, { source: 'add_recurring_rule', rule });
   return rule;
 }
 
@@ -1282,6 +1374,10 @@ export function updateRecurringRule(id, data) {
   if (!rule) throw new Error('Recurring rule not found');
   Object.assign(rule, data);
   if (rule.capacity) rule.capacity = Math.min(6, parseInt(rule.capacity, 10));
+  saveRecurringRulesCache();
+  // Auto-generate matching calendar sessions so rule updates reflect in weekly timetable matrix immediately!
+  generateSessionsFromRules(4);
+  events.emit(EVENT.DATA_MUTATED, { source: 'update_recurring_rule', rule });
   return rule;
 }
 
@@ -1294,6 +1390,22 @@ export function deleteRecurringRule(id) {
   const idx = state.recurringRules.findIndex(r => r.id === id);
   if (idx === -1) throw new Error('Recurring rule not found');
   const [removed] = state.recurringRules.splice(idx, 1);
+  saveRecurringRulesCache();
+
+  // Cleanly prune future unbooked sessions that were generated from this rule
+  const now = new Date();
+  const bookedSessionIds = new Set(state.bookings.map(b => b.classSessionId || b.sessionId));
+  state.classSessions = state.classSessions.filter(s => {
+    if (s.recurringRuleId === id) {
+      const sDate = new Date(`${s.date}T${s.time}`);
+      if (sDate > now && !bookedSessionIds.has(s.id)) {
+        return false;
+      }
+    }
+    return true;
+  });
+  saveClassSessionsCache();
+  events.emit(EVENT.DATA_MUTATED, { source: 'delete_recurring_rule', id });
   return removed;
 }
 
@@ -1329,20 +1441,31 @@ export function generateSessionsFromRules(weeksAhead = 4) {
           const dateStr = d.toISOString().slice(0, 10);
           // Check if session already exists for this date, time and discipline
           const exists = state.classSessions.some(
-            s => s.date === dateStr && s.time === rule.time && s.disciplineId === rule.disciplineId
+            s => s.date === dateStr && s.time === rule.time && (s.disciplineId === rule.disciplineId || s.discipline_id === rule.disciplineId)
           );
           if (!exists) {
-            const startsAt = new Date(`${dateStr}T${rule.time}`).toISOString();
+            const startsAt = `${dateStr}T${rule.time}:00+05:30`;
+            const durationMin = rule.durationMinutes || 60;
+            const endTime = new Date(new Date(startsAt).getTime() + durationMin * 60000).toISOString();
+            const cap = Math.min(6, parseInt(rule.capacity, 10) || 6);
             const session = {
               id: genId('session'),
+              title: rule.title || 'Studio Session',
               disciplineId: rule.disciplineId,
+              discipline_id: rule.disciplineId,
               trainerId: rule.trainerId,
+              trainer_id: rule.trainerId,
               date: dateStr,
               time: rule.time,
               startsAt,
-              durationMinutes: rule.durationMinutes || 60,
-              capacity: rule.capacity || 6,
-              spotsRemaining: rule.capacity || 6,
+              start_time: startsAt,
+              endTime,
+              end_time: endTime,
+              durationMinutes: durationMin,
+              capacity: cap,
+              spotsRemaining: cap,
+              spotsLeft: cap,
+              status: 'scheduled',
               recurringRuleId: rule.id
             };
             state.classSessions.push(session);
@@ -1460,35 +1583,58 @@ export async function bookClass(memberId, sessionId) {
   const pass = getActiveMemberPass(memberId);
   const passId = pass ? pass.id : null;
 
+  let createdBooking = null;
   // Wait for database confirmation before mutating local state
   if (isSupabaseConfigured()) {
-    await dbCreateBooking({
+    createdBooking = await dbCreateBooking({
       memberId,
       sessionId,
-      passId
+      passId,
+      disciplineId: session.disciplineId
     });
   }
 
   // Decrement spot and credit
   session.spotsRemaining -= 1;
+  const aliasMap = {
+    'disc-001': CONFIG.DISCIPLINES.PILATES,
+    'disc-002': CONFIG.DISCIPLINES.BARRE,
+    'disc-003': CONFIG.DISCIPLINES.SCULPT_YOGA
+  };
+  const normDisciplineId = aliasMap[session.disciplineId] || session.disciplineId;
   const credit = state.memberPassCredits.find(
-    c => c.memberPassId === passId && c.disciplineId === session.disciplineId
+    c => (c.memberPassId === passId || c.passId === passId || c.pass_id === passId) &&
+         (c.disciplineId === session.disciplineId || c.disciplineId === normDisciplineId || c.discipline_id === session.disciplineId || c.discipline_id === normDisciplineId)
   );
-  if (credit) credit.sessionsUsed += 1;
+  if (credit) {
+    credit.sessionsUsed = (credit.sessionsUsed || 0) + 1;
+    if (credit.remainingCredits !== undefined) {
+      credit.remainingCredits = Math.max(0, credit.remainingCredits - 1);
+    }
+  }
 
+  const bookingId = createdBooking?.id || genId('booking');
   const booking = {
-    id: genId('booking'),
+    id: bookingId,
     memberId,
     sessionId,
     classSessionId: sessionId,
     passId,
     status,
-    bookedAt: new Date().toISOString(),
+    bookedAt: createdBooking?.booked_at || createdBooking?.bookedAt || new Date().toISOString(),
     decidedAt: null,
     decidedBy: null,
   };
-  state.bookings.push(booking);
+  const existingIdx = state.bookings.findIndex(
+    b => b.id === booking.id || (isMemberIdMatch(b.memberId, memberId) && (b.classSessionId === sessionId || b.sessionId === sessionId) && b.status !== 'cancelled')
+  );
+  if (existingIdx >= 0) {
+    state.bookings[existingIdx] = booking;
+  } else {
+    state.bookings.push(booking);
+  }
   saveBookingsCache();
+  saveMemberPassesCache();
 
   // Log activity
   const disc = getDisciplineById(session.disciplineId);
@@ -1536,7 +1682,7 @@ export async function cancelBooking(bookingId) {
   }
 
   const sId = booking.classSessionId || booking.sessionId;
-  const session = getClassSessionById(sId);
+  const session = getClassSessionById(sId) || booking.session;
 
   if (session) {
     let classStart = null;
@@ -1563,8 +1709,12 @@ export async function cancelBooking(bookingId) {
     }
   }
 
+  const targetDisciplineId = session?.disciplineId || session?.discipline_id || booking.disciplineId || booking.discipline_id || 'disc-barre';
+  const pass = getActiveMemberPass(booking.memberId);
+  const targetPassId = booking.passId || (pass ? pass.id : null);
+
   if (isSupabaseConfigured()) {
-    await dbCancelBooking(booking.id);
+    await dbCancelBooking(booking.id, { passId: targetPassId, disciplineId: targetDisciplineId });
   }
 
   booking.status = 'cancelled';
@@ -1573,19 +1723,31 @@ export async function cancelBooking(bookingId) {
 
   // Restore spot and credit
   if (session) {
-    session.spotsRemaining = Math.min(session.capacity || 6, session.spotsRemaining + 1);
+    session.spotsRemaining = Math.min(session.capacity || 6, (session.spotsRemaining || 0) + 1);
   }
-  const pass = getActiveMemberPass(booking.memberId);
-  const targetPassId = booking.passId || (pass ? pass.id : null);
-  if (targetPassId && session) {
+  if (targetPassId) {
+    const aliasMap = {
+      'disc-001': CONFIG.DISCIPLINES.PILATES,
+      'disc-002': CONFIG.DISCIPLINES.BARRE,
+      'disc-003': CONFIG.DISCIPLINES.SCULPT_YOGA
+    };
+    const normDisciplineId = aliasMap[targetDisciplineId] || targetDisciplineId;
     const credit = state.memberPassCredits.find(
-      c => c.memberPassId === targetPassId && c.disciplineId === session.disciplineId
+      c => (c.memberPassId === targetPassId || c.passId === targetPassId || c.pass_id === targetPassId) &&
+           (c.disciplineId === targetDisciplineId || c.disciplineId === normDisciplineId || c.discipline_id === targetDisciplineId || c.discipline_id === normDisciplineId)
     );
-    if (credit) credit.sessionsUsed = Math.max(0, credit.sessionsUsed - 1);
+    if (credit) {
+      credit.sessionsUsed = Math.max(0, (credit.sessionsUsed || 0) - 1);
+      if (credit.remainingCredits !== undefined) {
+        const total = credit.sessionsIncluded !== undefined ? credit.sessionsIncluded : (credit.total_credits || 999);
+        credit.remainingCredits = Math.min(total, credit.remainingCredits + 1);
+      }
+    }
   }
 
   logActivity(booking.memberId, 'member', 'Cancelled a booking', 'booking');
   saveBookingsCache();
+  saveMemberPassesCache();
   events.emit(EVENT.BOOKING_CANCELLED, { booking });
 
   return { success: true, booking };
@@ -1683,10 +1845,8 @@ function enrichBooking(b) {
 export async function syncBookings(memberId = null) {
   try {
     const remote = await dbGetBookings(memberId);
-    if (Array.isArray(remote) && remote.length > 0) {
-      const remoteIds = new Set(remote.map(r => r.id));
-      const localOnly = state.bookings.filter(b => !remoteIds.has(b.id));
-      state.bookings = [...remote, ...localOnly];
+    if (Array.isArray(remote)) {
+      state.bookings = remote;
       saveBookingsCache();
       events.emit(EVENT.DATA_MUTATED, { source: 'sync_bookings' });
     }
@@ -2266,8 +2426,11 @@ export function getBarreMemberDetail(memberId) {
  */
 export function getBarreSchedule() {
   return state.classSessions
-    .filter(s => s.disciplineId === CONFIG.DISCIPLINES.BARRE)
-    .sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
+    .filter(s => {
+      const d = s.disciplineId || s.discipline_id;
+      return d === CONFIG.DISCIPLINES.BARRE || d === 'disc-002' || (s.title && s.title.toLowerCase().includes('barre'));
+    })
+    .sort((a, b) => new Date(a.startsAt || a.start_time) - new Date(b.startsAt || b.start_time));
 }
 
 /**
@@ -2961,6 +3124,37 @@ export function getAllActivityLogs(filters = {}) {
   }
 
   return logs;
+}
+
+/**
+ * Synchronize audit activity logs from Supabase & server.
+ * @returns {Promise<Array>}
+ */
+export async function syncActivityLogs() {
+  try {
+    const logs = await dbGetActivityLogs();
+    if (Array.isArray(logs) && logs.length > 0) {
+      const remoteIds = new Set(logs.map(l => l.id));
+      const localOnly = (state.activityLog || []).filter(l => !remoteIds.has(l.id));
+      state.activityLog = [
+        ...logs.map(l => ({
+          id: l.id,
+          memberId: l.userId,
+          userId: l.userId,
+          actor: (l.user && l.user.role) || (l.details && l.details.actor) || 'member',
+          action: l.action,
+          category: (l.details && l.details.category) || 'general',
+          details: l.details || {},
+          createdAt: l.createdAt,
+          user: l.user
+        })),
+        ...localOnly
+      ];
+    }
+  } catch (err) {
+    console.warn('[store.syncActivityLogs error]', err);
+  }
+  return state.activityLog;
 }
 
 /**

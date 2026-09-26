@@ -35,9 +35,9 @@ export const CONFIG = {
     tagline: 'Private sanctuary of strength and elegance',
     gstin: '29ABIFP5917A1Z7',
     address: '2nd Floor, No. 8, 1st Main Road, Sadashiva Nagar, Bengaluru 560080',
-    phone: '+91 98765 43210',
+    phone: '+91 XXXXX XXXXX',
     email: 'hello@plashpilates.com',
-    whatsapp: '+91 98765 43210',
+    whatsapp: '+91 XXXXX XXXXX',
     hours: {
       weekday: '6:00 AM - 8:00 PM',
       saturday: '7:00 AM - 6:00 PM',
@@ -45,7 +45,7 @@ export const CONFIG = {
     },
     concierge: {
       name: 'Studio Concierge',
-      phone: '+91 98765 43210',
+      phone: '+91 XXXXX XXXXX',
       email: 'concierge@plashpilates.com',
     },
   },
@@ -63,15 +63,15 @@ export const CONFIG = {
     SCULPT_YOGA: 'disc-sculpt-yoga',
   },
 
-  /** Supabase Project Configuration */
+  /** Supabase Project Configuration (injected via environment / /api/public-config) */
   SUPABASE: {
-    URL: (typeof window !== 'undefined' && (window.PLASH_SUPABASE_URL || localStorage.getItem('plash_supabase_url'))) || 'https://ylabdaulbstmhvyzipyd.supabase.co',
-    ANON_KEY: (typeof window !== 'undefined' && (window.PLASH_SUPABASE_ANON_KEY || localStorage.getItem('plash_supabase_anon_key'))) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlsYWJkYXVsYnN0bWh2eXppcHlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk2NjQ3MzEsImV4cCI6MjEwNTI0MDczMX0.V3RC93ZvcJOW5gfh0rrO6iTejRS6T0JstFKbriLedPg',
+    URL: (typeof window !== 'undefined' && (window.PLASH_SUPABASE_URL || localStorage.getItem('plash_supabase_url'))) || '',
+    ANON_KEY: (typeof window !== 'undefined' && (window.PLASH_SUPABASE_ANON_KEY || localStorage.getItem('plash_supabase_anon_key'))) || '',
   },
 
-  /** Razorpay Gateway Configuration (loaded at runtime from .env) */
+  /** Razorpay Gateway Configuration (loaded at runtime from environment / /api/public-config) */
   RAZORPAY: {
-    KEY_ID: (typeof window !== 'undefined' && (window.PLASH_RAZORPAY_KEY || localStorage.getItem('plash_razorpay_key'))) || 'rzp_test_SKQzTiiysg1aGG',
+    KEY_ID: (typeof window !== 'undefined' && (window.PLASH_RAZORPAY_KEY || localStorage.getItem('plash_razorpay_key'))) || '',
     NAME: 'Plash Pilates Studio',
     THEME_COLOR: '#934b2d',
   },

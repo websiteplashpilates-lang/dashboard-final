@@ -61,6 +61,14 @@ export function createClassCard(session, { isBooked = false, hasCredit = true, o
 
   header.append(discEl, spotsEl);
 
+  // Title
+  const titleText = session.title || discipline.name || 'Studio Session';
+  const titleEl = createElement('h3', {
+    className: 'class-card-title',
+    style: 'font-size: 1.05rem; font-weight: 600; margin: var(--space-2) 0 var(--space-1); color: var(--ink); line-height: 1.3;',
+    text: titleText
+  });
+
   // Time
   const timeEl = createElement('div', {
     className: 'class-card-time',
@@ -140,6 +148,6 @@ export function createClassCard(session, { isBooked = false, hasCredit = true, o
     actions.appendChild(bookBtn);
   }
 
-  card.append(header, timeEl, meta, actions);
+  card.append(header, titleEl, timeEl, meta, actions);
   return card;
 }

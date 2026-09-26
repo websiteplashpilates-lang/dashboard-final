@@ -399,8 +399,9 @@ function openRefundModal(row, onSaved) {
         ${row.isRefunded ? 'Refund Processed' : 'Awaiting Refund'}
       </span>
     </div>
-    <div style="font-size: 13px; color: var(--ink); margin-top: 6px;">
-      <strong>Package:</strong> ${escapeHtml(row.packageName || 'Barre Package')}
+    <div style="font-size: 13px; color: var(--ink); margin-top: 6px; display: flex; justify-content: space-between; align-items: center;">
+      <span><strong>Package:</strong> ${escapeHtml(row.packageName || 'Barre Package')}</span>
+      <span style="font-weight: 700; color: #2E5A44; font-size: 14px;">Refund: ${formatCurrency(row.refundAmount || row.paidAmount || (row.pkg && row.pkg.priceInr) || 0)}</span>
     </div>
     <div style="font-size: 13px; color: #9A242B; margin-top: 4px;">
       <strong>Partner Declination Reason:</strong> "${escapeHtml(row.decisionReason || 'Partner coach safety assessment')}"
@@ -421,7 +422,7 @@ function openRefundModal(row, onSaved) {
         <i data-lucide="check-circle-2" style="width: 16px; height: 16px;"></i>
         Refund Audit Information
       </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
         <div>
           <span style="color: var(--ink-50); display: block; font-size: 11px;">REFUND REFERENCE</span>
           <span style="font-family: var(--font-mono); font-weight: 600; color: var(--ink);">${escapeHtml(row.refundRef || '—')}</span>
@@ -429,6 +430,14 @@ function openRefundModal(row, onSaved) {
         <div>
           <span style="color: var(--ink-50); display: block; font-size: 11px;">SETTLEMENT METHOD</span>
           <span style="font-weight: 600; color: var(--ink);">${escapeHtml(row.refundMethod || 'Razorpay Gateway')}</span>
+        </div>
+        <div>
+          <span style="color: var(--ink-50); display: block; font-size: 11px;">REFUND AMOUNT SETTLED</span>
+          <span style="font-weight: 700; color: #2E5A44; font-size: 15px;">${formatCurrency(row.refundAmount || row.paidAmount || (row.pkg && row.pkg.priceInr) || 0)}</span>
+        </div>
+        <div>
+          <span style="color: var(--ink-50); display: block; font-size: 11px;">ORIGINAL PACKAGE FEE</span>
+          <span style="font-weight: 600; color: var(--ink);">${formatCurrency(row.paidAmount || (row.pkg && row.pkg.priceInr) || 0)}</span>
         </div>
         <div>
           <span style="color: var(--ink-50); display: block; font-size: 11px;">DATE PROCESSED</span>

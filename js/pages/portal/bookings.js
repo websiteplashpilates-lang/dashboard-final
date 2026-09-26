@@ -215,6 +215,7 @@ function renderUpcoming(container, memberId, onUpdate) {
           confirmBtn.disabled = true;
           confirmBtn.textContent = 'Cancelling...';
           await store.cancelBooking(b.id);
+          await store.fetchMemberPasses(memberId).catch(() => {});
           modal.close();
           showToast('Booking cancelled. Session credit refunded.', 'info');
           onUpdate();

@@ -199,6 +199,34 @@ function getRazorpayOrderPayments(orderId) {
   });
 }
 
+// Fetch single order from Razorpay API
+function fetchRazorpayOrder(orderId) {
+  return new Promise((resolve) => {
+    if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET || !orderId) return resolve(null);
+    const auth = Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString('base64');
+    const options = {
+      hostname: 'api.razorpay.com',
+      port: 443,
+      path: `/v1/orders/${encodeURIComponent(orderId)}`,
+      method: 'GET',
+      headers: { 'Authorization': `Basic ${auth}` }
+    };
+    const req = https.request(options, res => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    });
+    req.on('error', () => resolve(null));
+    req.end();
+  });
+}
+
 // Fetch single payment from Razorpay API
 function fetchRazorpayPayment(paymentId) {
   return new Promise((resolve, reject) => {
@@ -333,7 +361,8 @@ async function syncAllRazorpayPaymentsToSupabase(limit = 100) {
         });
       }
       if (!matchedPkg) {
-        matchedPkg = packages[0] || { id: 'pkg-001', name: 'Signature Membership', price_inr: 27000, duration_months: 1 };
+        console.warn(`[Auto-Sync] Skipping payment ${p.id} (₹${paidInr}): No matching package found in catalog for email ${memberEmail}. Flagged for review.`);
+        continue;
       }
 
       const baseAmount = Number(matchedPkg.price_inr);
@@ -445,124 +474,130 @@ function isMemberBarreApproved(memberId, email) {
   }
 }
 
+// In-flight active fulfillments to guarantee atomic concurrency per payment ID
+const activeFulfillments = new Map();
+
 // 7. Secure Backend Payment Fulfillment (Zero Trust Architecture)
 async function fulfillVerifiedPayment({ razorpay_order_id, razorpay_payment_id, razorpay_signature, packageId, memberId }) {
   if (!razorpay_order_id || !razorpay_payment_id || !packageId || !memberId) {
     throw new Error('Missing payment verification parameters. All fields are required.');
   }
 
-  // 1. Strict UUID validation on memberId
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(memberId)) {
-    throw new Error('Invalid member ID format. Must be a valid UUID.');
+  // Concurrency guard: await in-flight fulfillment for same payment to prevent duplicate processing
+  if (activeFulfillments.has(razorpay_payment_id)) {
+    console.log(`[Concurrency] Awaiting in-flight fulfillment for payment ${razorpay_payment_id}`);
+    return await activeFulfillments.get(razorpay_payment_id);
   }
 
-  // 2. Cryptographic Signature Verification (HMAC verification when signature is provided)
-  if (razorpay_signature) {
+  const fulfillmentPromise = (async () => {
+    // 1. Strict UUID validation on memberId
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(memberId)) {
+      throw new Error('Invalid member ID format. Must be a valid UUID.');
+    }
+
+    // 2. Cryptographic Signature Verification (Strict enforcement on client fulfillment route)
+    if (!razorpay_signature) {
+      throw new Error('Missing Razorpay cryptographic signature. Verification rejected.');
+    }
     const isValid = verifyPaymentSignature({ razorpay_order_id, razorpay_payment_id, razorpay_signature });
     if (!isValid) {
       throw new Error('Invalid Razorpay cryptographic signature. Fulfillment rejected.');
     }
-  }
 
-  // 3. Fetch package metadata from Supabase
-  const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
-  if (!SUPABASE_URL || !supabaseKey) {
-    throw new Error('Database service is currently unavailable.');
-  }
-
-  let pkg = null;
-  try {
-    const pRes = await fetch(`${SUPABASE_URL}/rest/v1/packages?id=eq.${encodeURIComponent(packageId)}&select=*`, {
-      headers: {
-        apikey: supabaseKey,
-        Authorization: `Bearer ${supabaseKey}`
-      }
-    });
-    if (pRes.ok) {
-      const pkgs = await pRes.json();
-      if (pkgs && pkgs.length > 0) pkg = pkgs[0];
+    // 3. Fetch package metadata from Supabase
+    const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+    if (!SUPABASE_URL || !supabaseKey) {
+      throw new Error('Database service is currently unavailable.');
     }
-  } catch (e) {
-    console.warn('[Fulfill fetch package error]', e.message);
-  }
 
-  if (!pkg) {
-    throw new Error(`Package "${packageId}" not found in studio catalog.`);
-  }
+    let pkg = null;
+    try {
+      const pRes = await fetch(`${SUPABASE_URL}/rest/v1/packages?id=eq.${encodeURIComponent(packageId)}&select=*`, {
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`
+        }
+      });
+      if (pRes.ok) {
+        const pkgs = await pRes.json();
+        if (pkgs && pkgs.length > 0) pkg = pkgs[0];
+      }
+    } catch (e) {
+      console.warn('[Fulfill fetch package error]', e.message);
+    }
 
-  // 4. Idempotency Check: Prevent duplicate passes / replay attacks
-  try {
-    const existRes = await fetch(`${SUPABASE_URL}/rest/v1/payments?reference=eq.${encodeURIComponent(razorpay_payment_id)}&select=*`, {
-      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
-    });
-    if (existRes.ok) {
-      const existingPayments = await existRes.json();
-      if (existingPayments && existingPayments.length > 0) {
-        const ep = existingPayments[0];
-        console.log(`[Idempotency] Payment ${razorpay_payment_id} already fulfilled. Returning existing invoice ${ep.invoice_no}.`);
-        // Also look up existing pass for this member and package
-        let existingPass = null;
-        try {
-          const passRes = await fetch(`${SUPABASE_URL}/rest/v1/member_passes?member_id=eq.${ep.member_id}&package_id=eq.${ep.package_id}&order=created_at.desc&limit=1`, {
-            headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
-          });
-          if (passRes.ok) {
-            const passes = await passRes.json();
-            if (passes.length > 0) {
-              existingPass = {
-                id: passes[0].id,
-                memberId: passes[0].member_id,
-                packageId: passes[0].package_id,
-                status: passes[0].status,
-                validFrom: passes[0].valid_from,
-                validUntil: passes[0].valid_until
-              };
+    if (!pkg) {
+      throw new Error(`Package "${packageId}" not found in studio catalog.`);
+    }
+
+    // 4. Idempotency Check: Prevent duplicate passes / replay attacks
+    try {
+      const existRes = await fetch(`${SUPABASE_URL}/rest/v1/payments?reference=eq.${encodeURIComponent(razorpay_payment_id)}&select=*`, {
+        headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+      });
+      if (existRes.ok) {
+        const existingPayments = await existRes.json();
+        if (existingPayments && existingPayments.length > 0) {
+          const ep = existingPayments[0];
+          console.log(`[Idempotency] Payment ${razorpay_payment_id} already fulfilled. Returning existing invoice ${ep.invoice_no}.`);
+          let existingPass = null;
+          try {
+            const passRes = await fetch(`${SUPABASE_URL}/rest/v1/member_passes?member_id=eq.${ep.member_id}&package_id=eq.${ep.package_id}&order=created_at.desc&limit=1`, {
+              headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+            });
+            if (passRes.ok) {
+              const passes = await passRes.json();
+              if (passes.length > 0) {
+                existingPass = {
+                  id: passes[0].id,
+                  memberId: passes[0].member_id,
+                  packageId: passes[0].package_id,
+                  status: passes[0].status,
+                  validFrom: passes[0].valid_from,
+                  validUntil: passes[0].valid_until
+                };
+              }
             }
-          }
-        } catch (_) {}
+          } catch (_) {}
 
-        return {
-          success: true,
-          idempotent: true,
-          payment: {
-            id: ep.id,
-            memberId: ep.member_id,
-            packageId: ep.package_id,
-            baseAmountInr: Number(ep.base_amount_inr),
-            cgstInr: Number(ep.cgst_inr),
-            sgstInr: Number(ep.sgst_inr),
-            totalAmountInr: Number(ep.total_amount_inr),
-            amountInr: Number(ep.total_amount_inr),
-            status: ep.status,
-            reference: ep.reference,
-            invoiceNo: ep.invoice_no,
-            invoiceNumber: ep.invoice_no,
-            paymentMethod: ep.payment_method,
-            createdAt: ep.created_at
-          },
-          pass: existingPass || { id: 'pass-existing' }
-        };
+          return {
+            success: true,
+            idempotent: true,
+            payment: {
+              id: ep.id,
+              memberId: ep.member_id,
+              packageId: ep.package_id,
+              baseAmountInr: Number(ep.base_amount_inr),
+              cgstInr: Number(ep.cgst_inr),
+              sgstInr: Number(ep.sgst_inr),
+              totalAmountInr: Number(ep.total_amount_inr),
+              amountInr: Number(ep.total_amount_inr),
+              status: ep.status,
+              reference: ep.reference,
+              invoiceNo: ep.invoice_no,
+              invoiceNumber: ep.invoice_no,
+              paymentMethod: ep.payment_method,
+              createdAt: ep.created_at
+            },
+            pass: existingPass || { id: 'pass-existing' }
+          };
+        }
       }
+    } catch (err) {
+      console.error('[Idempotency check error]', err.message);
     }
-  } catch (err) {
-    console.error('[Idempotency check error]', err.message);
-  }
 
-  // 5. Strict Live Payment Verification with Razorpay API (Zero Trust Gateway Verification)
-  if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
-    throw new Error('Payment gateway credentials not configured on server.');
-  }
-
-  const rzpPayment = await fetchRazorpayPayment(razorpay_payment_id);
-  if (!rzpPayment) {
-    if (!razorpay_signature) {
-      throw new Error('Unable to connect to Razorpay payment gateway for verification.');
+    // 5. Strict Live Gateway Verification & Authoritative Order Ownership Binding
+    if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+      throw new Error('Payment gateway credentials not configured on server.');
     }
-    console.warn(`[Gateway Notice] Razorpay API unreachable, relying on verified HMAC-SHA256 signature for ${razorpay_payment_id}`);
-  } else if (rzpPayment.error) {
-    throw new Error(`Razorpay gateway rejected payment: ${rzpPayment.error.description || rzpPayment.error.code || 'Payment ID not found on gateway'}`);
-  } else {
+
+    const rzpPayment = await fetchRazorpayPayment(razorpay_payment_id);
+    if (!rzpPayment || rzpPayment.error) {
+      throw new Error(`Razorpay gateway rejected payment: ${rzpPayment?.error?.description || rzpPayment?.error?.code || 'Payment ID not found on gateway'}`);
+    }
+
     if (rzpPayment.status !== 'captured' && rzpPayment.status !== 'authorized') {
       throw new Error(`Razorpay payment status is "${rzpPayment.status}". Only captured payments can be fulfilled.`);
     }
@@ -583,310 +618,334 @@ async function fulfillVerifiedPayment({ razorpay_order_id, razorpay_payment_id, 
     if (expectedPaise - Number(rzpPayment.amount) > 100) {
       throw new Error(`Paid amount (₹${Number(rzpPayment.amount) / 100}) is less than required total with 18% GST (₹${totalAmount}). Payment rejected.`);
     }
-  }
 
-  // 5.5 Member Profile Verification & Self-Healing (Prevents 409 Foreign Key Violation)
-  let resolvedMemberId = memberId;
-  try {
+    // 5.1 Authoritative Razorpay Order Validation & Strict User Binding (IDOR Protection)
+    const rzpOrder = await fetchRazorpayOrder(razorpay_order_id);
+    if (!rzpOrder || rzpOrder.error) {
+      throw new Error('Razorpay order verification failed: Order ID not found on gateway.');
+    }
+
+    const orderNotes = rzpOrder.notes || {};
+    const paymentNotes = rzpPayment.notes || {};
+    const boundMemberId = orderNotes.memberId || paymentNotes.memberId;
+    const boundPackageId = orderNotes.packageId || paymentNotes.packageId;
+
+    if (boundMemberId && boundMemberId !== memberId) {
+      throw new Error(`Payment ownership mismatch: Payment was authorized for member ${boundMemberId}, not ${memberId}.`);
+    }
+    if (boundPackageId && boundPackageId !== packageId) {
+      throw new Error(`Payment package mismatch: Payment was authorized for package ${boundPackageId}, not ${packageId}.`);
+    }
+
+    // 5.5 Member Profile Verification (Strict existence check - no arbitrary auto-creation for attackers)
+    let resolvedMemberId = memberId;
     const profCheck = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(resolvedMemberId)}&select=id,email`, {
       headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
     });
     let profileExists = false;
+    let existingProfileEmail = null;
     if (profCheck.ok) {
       const pList = await profCheck.json();
-      if (pList && pList.length > 0) profileExists = true;
+      if (pList && pList.length > 0) {
+        profileExists = true;
+        existingProfileEmail = pList[0].email;
+      }
     }
 
     if (!profileExists) {
-      // Check if candidate email from payment matches an active profile
-      const candidateEmail = (rzpPayment && rzpPayment.email) ? String(rzpPayment.email).trim().toLowerCase() : null;
-      let matchedProfile = null;
-      if (candidateEmail) {
-        const emailProfRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(candidateEmail)}&select=id,email`, {
-          headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
-        });
-        if (emailProfRes.ok) {
-          const epList = await emailProfRes.json();
-          if (epList && epList.length > 0) matchedProfile = epList[0];
-        }
-      }
-
-      if (matchedProfile) {
-        console.log(`[Payment Self-Heal] Stale memberId ${resolvedMemberId} mapped to existing active profile ${matchedProfile.id} (${candidateEmail})`);
-        resolvedMemberId = matchedProfile.id;
-      } else {
-        // Auto-create missing profile row so foreign key constraint never fails
-        console.log(`[Payment Self-Heal] Auto-creating missing profile for member ${resolvedMemberId}`);
-        const newEmail = candidateEmail || `member-${resolvedMemberId.slice(0, 8)}@plashpilates.com`;
-        await fetch(`${SUPABASE_URL}/rest/v1/profiles`, {
-          method: 'POST',
-          headers: {
-            apikey: supabaseKey,
-            Authorization: `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json',
-            Prefer: 'resolution=merge-duplicates'
-          },
-          body: JSON.stringify({
-            id: resolvedMemberId,
-            email: newEmail,
-            full_name: 'Studio Member',
-            phone: (rzpPayment && rzpPayment.contact) ? String(rzpPayment.contact) : null,
-            role: 'member',
-            tier: 'Founding Standard',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-        });
-      }
-    }
-  } catch (selfHealErr) {
-    console.warn('[Payment Self-Heal Warning]', selfHealErr.message);
-  }
-
-  // 6. Calculate Financial Amounts (Base package price + 18% GST charged at checkout)
-  const baseAmount = Number(pkg.price_inr);
-  const cgst = Number((baseAmount * 0.09).toFixed(2));
-  const sgst = Number((baseAmount * 0.09).toFixed(2));
-  const totalAmount = Number((baseAmount + cgst + sgst).toFixed(2));
-  const now = new Date();
-  const durationMonths = Number(pkg.duration_months) || 1;
-  const validUntil = new Date(now);
-  validUntil.setMonth(validUntil.getMonth() + durationMonths);
-
-  const paymentRow = {
-    id: `pay-${Date.now().toString().slice(-8)}`,
-    member_id: resolvedMemberId,
-    package_id: packageId,
-    invoice_no: `INV-${Date.now().toString().slice(-6)}`,
-    gstin: '29ABIFP5917A1Z7',
-    base_amount_inr: baseAmount,
-    cgst_inr: cgst,
-    sgst_inr: sgst,
-    total_amount_inr: totalAmount,
-    payment_method: 'Razorpay Live Gateway',
-    reference: razorpay_payment_id,
-    status: 'paid',
-    created_at: now.toISOString()
-  };
-
-  const passRow = {
-    id: `pass-${Date.now().toString().slice(-8)}`,
-    member_id: resolvedMemberId,
-    package_id: packageId,
-    status: 'active',
-    valid_from: now.toISOString(),
-    valid_until: validUntil.toISOString(),
-    created_at: now.toISOString()
-  };
-
-  // Barre Credit Gating: If client is not yet approved by Physicq 57, Barre credits start at 0 until partner approves
-  const candidateEmail = (rzpPayment && rzpPayment.email) ? String(rzpPayment.email).trim().toLowerCase() : null;
-  const isApprovedForBarre = isMemberBarreApproved(resolvedMemberId, candidateEmail);
-
-  let pendingBarreCount = 0;
-  const allocations = pkg.session_allocations || [];
-  const creditRows = allocations.map(alloc => {
-    const isBarre = alloc.disciplineId === 'disc-barre' || String(alloc.disciplineId || '').toLowerCase().includes('barre');
-    let total = alloc.sessionCount;
-    let remaining = alloc.sessionCount;
-
-    if (isBarre && !isApprovedForBarre) {
-      pendingBarreCount = alloc.sessionCount;
-      total = 0;
-      remaining = 0;
+      throw new Error(`Member profile "${resolvedMemberId}" does not exist. Fulfillment rejected.`);
     }
 
-    return {
-      pass_id: passRow.id,
-      discipline_id: alloc.disciplineId,
-      total_credits: total,
-      remaining_credits: remaining
+    // If payment email is present, ensure it matches profile email
+    const candidateEmail = (rzpPayment && rzpPayment.email) ? String(rzpPayment.email).trim().toLowerCase() : null;
+    if (candidateEmail && existingProfileEmail && existingProfileEmail.trim().toLowerCase() !== candidateEmail && !boundMemberId) {
+      throw new Error(`Payment email mismatch: Payment was made by ${candidateEmail}, not matching member profile.`);
+    }
+
+    // 6. Calculate Financial Amounts
+    const now = new Date();
+    const durationMonths = Number(pkg.duration_months) || 1;
+    const validUntil = new Date(now);
+    validUntil.setMonth(validUntil.getMonth() + durationMonths);
+
+    const cleanRef = String(razorpay_payment_id).replace(/[^a-zA-Z0-9]/g, '').slice(-12);
+    const paymentRow = {
+      id: `pay-${cleanRef}`,
+      member_id: resolvedMemberId,
+      package_id: packageId,
+      invoice_no: `INV-${cleanRef.slice(-6).toUpperCase()}`,
+      gstin: '29ABIFP5917A1Z7',
+      base_amount_inr: baseAmount,
+      cgst_inr: cgst,
+      sgst_inr: sgst,
+      total_amount_inr: totalAmount,
+      payment_method: 'Razorpay Live Gateway',
+      reference: razorpay_payment_id,
+      status: 'paid',
+      created_at: now.toISOString()
     };
-  });
 
-  // 7. Atomic Supabase Writes with Verification and Rollback
-  const payRes = await fetch(`${SUPABASE_URL}/rest/v1/payments`, {
-    method: 'POST',
-    headers: {
-      apikey: supabaseKey,
-      Authorization: `Bearer ${supabaseKey}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation'
-    },
-    body: JSON.stringify(paymentRow)
-  });
+    const passRow = {
+      id: `pass-${cleanRef}`,
+      member_id: resolvedMemberId,
+      package_id: packageId,
+      status: 'active',
+      valid_from: now.toISOString(),
+      valid_until: validUntil.toISOString(),
+      created_at: now.toISOString()
+    };
 
-  if (!payRes.ok) {
-    const errText = await payRes.text();
-    console.error('[Supabase Payment Write Failure]', errText);
-    throw new Error(`Database failure creating payment record: ${payRes.status}`);
-  }
+    // Barre Credit Gating: If client is not yet approved by Physicq 57, Barre credits start at 0 until partner approves
+    const isApprovedForBarre = isMemberBarreApproved(resolvedMemberId, candidateEmail);
 
-  const passRes = await fetch(`${SUPABASE_URL}/rest/v1/member_passes`, {
-    method: 'POST',
-    headers: {
-      apikey: supabaseKey,
-      Authorization: `Bearer ${supabaseKey}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation'
-    },
-    body: JSON.stringify(passRow)
-  });
+    let pendingBarreCount = 0;
+    const allocations = pkg.session_allocations || [];
+    const creditRows = allocations.map(alloc => {
+      const isBarre = alloc.disciplineId === 'disc-barre' || String(alloc.disciplineId || '').toLowerCase().includes('barre');
+      let total = alloc.sessionCount;
+      let remaining = alloc.sessionCount;
 
-  if (!passRes.ok) {
-    const errText = await passRes.text();
-    console.error('[Supabase Pass Write Failure]', errText);
-    // Rollback payment row
-    await fetch(`${SUPABASE_URL}/rest/v1/payments?id=eq.${paymentRow.id}`, {
-      method: 'DELETE',
-      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+      if (isBarre && !isApprovedForBarre) {
+        pendingBarreCount = alloc.sessionCount;
+        total = 0;
+        remaining = 0;
+      }
+
+      return {
+        pass_id: passRow.id,
+        discipline_id: alloc.disciplineId,
+        total_credits: total,
+        remaining_credits: remaining
+      };
     });
-    throw new Error(`Database failure creating member pass: ${passRes.status}`);
-  }
 
-  if (creditRows.length > 0) {
-    const credRes = await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits`, {
+    // 7. Atomic Supabase Writes with Concurrency Race-Conflict Recovery
+    const payRes = await fetch(`${SUPABASE_URL}/rest/v1/payments`, {
       method: 'POST',
       headers: {
         apikey: supabaseKey,
         Authorization: `Bearer ${supabaseKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation'
       },
-      body: JSON.stringify(creditRows)
+      body: JSON.stringify(paymentRow)
     });
 
-    if (!credRes.ok) {
-      const errText = await credRes.text();
-      console.error('[Supabase Credits Write Failure]', errText);
-      // Rollback pass and payment rows
-      await fetch(`${SUPABASE_URL}/rest/v1/member_passes?id=eq.${passRow.id}`, {
-        method: 'DELETE',
-        headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
-      });
+    if (!payRes.ok) {
+      const errText = await payRes.text();
+      // Database Unique Constraint race-conflict: retrieve existing fulfilled payment
+      if (payRes.status === 409 || errText.includes('duplicate') || errText.includes('payments_reference_key')) {
+        console.log(`[Database Concurrency] Payment ${razorpay_payment_id} recorded concurrently. Retrieving existing record.`);
+        const existRes = await fetch(`${SUPABASE_URL}/rest/v1/payments?reference=eq.${encodeURIComponent(razorpay_payment_id)}&select=*`, {
+          headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+        });
+        if (existRes.ok) {
+          const epList = await existRes.json();
+          if (epList && epList.length > 0) {
+            const ep = epList[0];
+            const passRes = await fetch(`${SUPABASE_URL}/rest/v1/member_passes?member_id=eq.${ep.member_id}&package_id=eq.${ep.package_id}&order=created_at.desc&limit=1`, {
+              headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+            });
+            const passes = passRes.ok ? await passRes.json() : [];
+            return {
+              success: true,
+              idempotent: true,
+              payment: {
+                id: ep.id,
+                memberId: ep.member_id,
+                packageId: ep.package_id,
+                baseAmountInr: Number(ep.base_amount_inr),
+                cgstInr: Number(ep.cgst_inr),
+                sgstInr: Number(ep.sgst_inr),
+                totalAmountInr: Number(ep.total_amount_inr),
+                amountInr: Number(ep.total_amount_inr),
+                status: ep.status,
+                reference: ep.reference,
+                invoiceNo: ep.invoice_no,
+                invoiceNumber: ep.invoice_no,
+                paymentMethod: ep.payment_method,
+                createdAt: ep.created_at
+              },
+              pass: passes[0] || { id: 'pass-existing' }
+            };
+          }
+        }
+      }
+      console.error('[Supabase Payment Write Failure]', errText);
+      throw new Error(`Database failure creating payment record: ${payRes.status}`);
+    }
+
+    const passRes = await fetch(`${SUPABASE_URL}/rest/v1/member_passes`, {
+      method: 'POST',
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation'
+      },
+      body: JSON.stringify(passRow)
+    });
+
+    if (!passRes.ok) {
+      const errText = await passRes.text();
+      console.error('[Supabase Pass Write Failure]', errText);
       await fetch(`${SUPABASE_URL}/rest/v1/payments?id=eq.${paymentRow.id}`, {
         method: 'DELETE',
         headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
       });
-      throw new Error(`Database failure creating pass credits: ${credRes.status}`);
+      throw new Error(`Database failure creating member pass: ${passRes.status}`);
     }
-  }
 
-  // If member has unapproved Barre sessions, queue pending review for Physicq 57
-  if (pendingBarreCount > 0) {
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      const reviewFilePath = path.join(__dirname, 'data', 'partner_reviews.json');
-      let reviews = [];
-      if (fs.existsSync(reviewFilePath)) {
-        try { reviews = JSON.parse(fs.readFileSync(reviewFilePath, 'utf-8')); } catch (_) {}
-      }
+    if (creditRows.length > 0) {
+      const credRes = await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits`, {
+        method: 'POST',
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(creditRows)
+      });
 
-      let mName = (rzpPayment && rzpPayment.notes && rzpPayment.notes.name) || 'Studio Member';
-      let mEmail = candidateEmail || '';
-      let mPhone = (rzpPayment && rzpPayment.contact) || '';
-      try {
-        const pRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(resolvedMemberId)}&select=*`, {
+      if (!credRes.ok) {
+        const errText = await credRes.text();
+        console.error('[Supabase Credits Write Failure]', errText);
+        await fetch(`${SUPABASE_URL}/rest/v1/member_passes?id=eq.${passRow.id}`, {
+          method: 'DELETE',
           headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
         });
-        if (pRes.ok) {
-          const profs = await pRes.json();
-          if (profs && profs[0]) {
-            mName = profs[0].full_name || mName;
-            mEmail = profs[0].email || mEmail;
-            mPhone = profs[0].phone || mPhone;
-          }
+        await fetch(`${SUPABASE_URL}/rest/v1/payments?id=eq.${paymentRow.id}`, {
+          method: 'DELETE',
+          headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+        });
+        throw new Error(`Database failure creating pass credits: ${credRes.status}`);
+      }
+    }
+
+    // If member has unapproved Barre sessions, queue pending review for Physicq 57
+    if (pendingBarreCount > 0) {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const reviewFilePath = path.join(__dirname, 'data', 'partner_reviews.json');
+        let reviews = [];
+        if (fs.existsSync(reviewFilePath)) {
+          try { reviews = JSON.parse(fs.readFileSync(reviewFilePath, 'utf-8')); } catch (_) {}
         }
-      } catch (_) {}
 
-      const newReview = {
-        id: `prev-${passRow.id}`,
-        passId: passRow.id,
-        memberId: resolvedMemberId,
-        memberName: mName,
-        memberEmail: mEmail,
-        memberPhone: mPhone,
-        packageId: packageId,
-        packageName: pkg.name || 'Barre Package',
-        pendingBarreCredits: pendingBarreCount,
-        status: 'pending',
-        healthNotes: 'Standard health declaration',
-        createdAt: now.toISOString(),
-        decidedAt: null,
-        decidedBy: null,
-        decisionReason: null,
-        adminNotified: false
-      };
+        let mName = (rzpPayment && rzpPayment.notes && rzpPayment.notes.name) || 'Studio Member';
+        let mEmail = candidateEmail || '';
+        let mPhone = (rzpPayment && rzpPayment.contact) || '';
+        try {
+          const pRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(resolvedMemberId)}&select=*`, {
+            headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+          });
+          if (pRes.ok) {
+            const profs = await pRes.json();
+            if (profs && profs[0]) {
+              mName = profs[0].full_name || mName;
+              mEmail = profs[0].email || mEmail;
+              mPhone = profs[0].phone || mPhone;
+            }
+          }
+        } catch (_) {}
 
-      const existingIdx = reviews.findIndex(r => r.passId === passRow.id || (r.memberId === resolvedMemberId && r.packageId === packageId && r.status === 'pending'));
-      if (existingIdx >= 0) {
-        reviews[existingIdx] = { ...reviews[existingIdx], ...newReview };
-      } else {
-        reviews.unshift(newReview);
+        const newReview = {
+          id: `prev-${passRow.id}`,
+          passId: passRow.id,
+          memberId: resolvedMemberId,
+          memberName: mName,
+          memberEmail: mEmail,
+          memberPhone: mPhone,
+          packageId: packageId,
+          packageName: pkg.name || 'Barre Package',
+          pendingBarreCredits: pendingBarreCount,
+          status: 'pending',
+          healthNotes: 'Standard health declaration',
+          createdAt: now.toISOString(),
+          decidedAt: null,
+          decidedBy: null,
+          decisionReason: null,
+          adminNotified: false
+        };
+
+        const existingIdx = reviews.findIndex(r => r.passId === passRow.id || (r.memberId === resolvedMemberId && r.packageId === packageId && r.status === 'pending'));
+        if (existingIdx >= 0) {
+          reviews[existingIdx] = { ...reviews[existingIdx], ...newReview };
+        } else {
+          reviews.unshift(newReview);
+        }
+
+        const dataDir = path.join(__dirname, 'data');
+        if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+        fs.writeFileSync(reviewFilePath, JSON.stringify(reviews, null, 2));
+        console.log(`[Barre Approval Gate] Member ${resolvedMemberId} queued for partner review with ${pendingBarreCount} pending credits.`);
+      } catch (revErr) {
+        console.error('[Barre Review Queue Error]', revErr.message);
+      }
+    }
+
+    // 6. Automated Receipt Generation & Dispatch to Member
+    let receiptDispatch = null;
+    try {
+      let memberProfile = null;
+      const profRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(resolvedMemberId)}&select=id,email,full_name,phone`, {
+        headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+      });
+      if (profRes.ok) {
+        const pList = await profRes.json();
+        if (pList && pList.length > 0) memberProfile = pList[0];
       }
 
-      const dataDir = path.join(__dirname, 'data');
-      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-      fs.writeFileSync(reviewFilePath, JSON.stringify(reviews, null, 2));
-      console.log(`[Barre Approval Gate] Member ${resolvedMemberId} queued for partner review with ${pendingBarreCount} pending credits.`);
-    } catch (revErr) {
-      console.error('[Barre Review Queue Error]', revErr.message);
+      if (memberProfile && memberProfile.email) {
+        receiptDispatch = await sendPaymentReceiptEmail({
+          payment: paymentRow,
+          pass: passRow,
+          member: memberProfile,
+          pkg
+        });
+      }
+    } catch (mailErr) {
+      console.warn('[Automated Receipt Mail Dispatch Warning]', mailErr.message);
     }
-  }
 
-  // 6. Automated Receipt Generation & Dispatch to Member
-  let receiptDispatch = null;
+    return {
+      success: true,
+      payment: {
+        id: paymentRow.id,
+        memberId: paymentRow.member_id,
+        packageId: paymentRow.package_id,
+        baseAmountInr: paymentRow.base_amount_inr,
+        cgstInr: paymentRow.cgst_inr,
+        sgstInr: paymentRow.sgst_inr,
+        totalAmountInr: paymentRow.total_amount_inr,
+        amountInr: paymentRow.total_amount_inr,
+        paymentMethod: paymentRow.payment_method,
+        status: paymentRow.status,
+        reference: paymentRow.reference,
+        invoiceNo: paymentRow.invoice_no,
+        invoiceNumber: paymentRow.invoice_no,
+        createdAt: paymentRow.created_at,
+        packageName: pkg.name
+      },
+      pass: {
+        id: passRow.id,
+        memberId: passRow.member_id,
+        packageId: passRow.package_id,
+        status: passRow.status,
+        validFrom: passRow.valid_from,
+        validUntil: passRow.valid_until
+      },
+      receipt: receiptDispatch || { success: true }
+    };
+  })();
+
+  activeFulfillments.set(razorpay_payment_id, fulfillmentPromise);
   try {
-    let memberProfile = null;
-    const profRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(resolvedMemberId)}&select=id,email,full_name,phone`, {
-      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
-    });
-    if (profRes.ok) {
-      const pList = await profRes.json();
-      if (pList && pList.length > 0) memberProfile = pList[0];
-    }
-
-    if (memberProfile && memberProfile.email) {
-      receiptDispatch = await sendPaymentReceiptEmail({
-        payment: paymentRow,
-        pass: passRow,
-        member: memberProfile,
-        pkg
-      });
-    }
-  } catch (mailErr) {
-    console.warn('[Automated Receipt Mail Dispatch Warning]', mailErr.message);
+    return await fulfillmentPromise;
+  } finally {
+    activeFulfillments.delete(razorpay_payment_id);
   }
-
-  return {
-    success: true,
-    payment: {
-      id: paymentRow.id,
-      memberId: paymentRow.member_id,
-      packageId: paymentRow.package_id,
-      baseAmountInr: paymentRow.base_amount_inr,
-      cgstInr: paymentRow.cgst_inr,
-      sgstInr: paymentRow.sgst_inr,
-      totalAmountInr: paymentRow.total_amount_inr,
-      amountInr: paymentRow.total_amount_inr,
-      paymentMethod: paymentRow.payment_method,
-      status: paymentRow.status,
-      reference: paymentRow.reference,
-      invoiceNo: paymentRow.invoice_no,
-      invoiceNumber: paymentRow.invoice_no,
-      createdAt: paymentRow.created_at,
-      packageName: pkg.name
-    },
-    pass: {
-      id: passRow.id,
-      memberId: passRow.member_id,
-      packageId: passRow.package_id,
-      status: passRow.status,
-      validFrom: passRow.valid_from,
-      validUntil: passRow.valid_until
-    },
-    receipt: receiptDispatch || { success: true }
-  };
 }
 
 // 6.1 Transactional Email Dispatcher for GST Tax Invoice Receipts
@@ -1663,10 +1722,29 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
             }
           } catch (_) {}
 
-          // Decrement pass credit in Supabase if passId is provided
-          if (passId) {
+          // Only manually decrement pass credit if Supabase trigger didn't already handle it
+          if (!created && passId) {
             try {
-              const credRes = await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(passId)}&order=created_at.desc&limit=1`, {
+              let targetDiscipline = body.disciplineId;
+              if (!targetDiscipline && sessionId) {
+                const localSessions = getClassSessionsFromFile();
+                const matched = localSessions.find(s => s.id === sessionId);
+                if (matched) targetDiscipline = matched.discipline_id || matched.disciplineId;
+              }
+              const aliasMap = {
+                'disc-001': 'disc-pilates',
+                'disc-002': 'disc-barre',
+                'disc-003': 'disc-sculpt-yoga'
+              };
+              const normDiscipline = aliasMap[targetDiscipline] || targetDiscipline;
+
+              let credUrl = `${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(passId)}`;
+              if (normDiscipline) {
+                credUrl += `&discipline_id=eq.${encodeURIComponent(normDiscipline)}`;
+              }
+              credUrl += `&limit=1`;
+
+              const credRes = await fetch(credUrl, {
                 headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
               });
               if (credRes.ok) {
@@ -1690,6 +1768,51 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
           return res.end(JSON.stringify({ success: true, booking: created || newBooking }));
         }
 
+        if (action === 'decrement_credit') {
+          if (passId) {
+            try {
+              let targetDiscipline = body.disciplineId;
+              if (!targetDiscipline && sessionId) {
+                const localSessions = getClassSessionsFromFile();
+                const matched = localSessions.find(s => s.id === sessionId);
+                if (matched) targetDiscipline = matched.discipline_id || matched.disciplineId;
+              }
+              const aliasMap = {
+                'disc-001': 'disc-pilates',
+                'disc-002': 'disc-barre',
+                'disc-003': 'disc-sculpt-yoga'
+              };
+              const normDiscipline = aliasMap[targetDiscipline] || targetDiscipline;
+
+              let credUrl = `${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(passId)}`;
+              if (normDiscipline) {
+                credUrl += `&discipline_id=eq.${encodeURIComponent(normDiscipline)}`;
+              }
+              credUrl += `&limit=1`;
+
+              const credRes = await fetch(credUrl, {
+                headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+              });
+              if (credRes.ok) {
+                const creds = await credRes.json();
+                if (creds && creds[0] && creds[0].remaining_credits > 0) {
+                  await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?id=eq.${creds[0].id}`, {
+                    method: 'PATCH',
+                    headers: {
+                      apikey: supabaseKey,
+                      Authorization: `Bearer ${supabaseKey}`,
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ remaining_credits: creds[0].remaining_credits - 1 })
+                  });
+                }
+              }
+            } catch (_) {}
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: true }));
+        }
+
         if (action === 'cancel' || action === 'admin_cancel') {
           const patch = {
             status: 'cancelled',
@@ -1707,14 +1830,45 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
 
           // Fetch existing booking to resolve pass_id for credit restoration
           try {
-            const bLookup = await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${encodeURIComponent(bookingId)}&select=pass_id`, {
+            const bLookup = await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${encodeURIComponent(bookingId)}&select=pass_id,session_id`, {
               headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
             });
+            let targetPassId = target?.pass_id || target?.passId || null;
+            let targetSessionId = target?.session_id || target?.sessionId || null;
             if (bLookup.ok) {
               const bData = await bLookup.json();
-              const targetPassId = bData && bData[0] ? bData[0].pass_id : null;
-              if (targetPassId) {
-                const credRes = await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(targetPassId)}&order=created_at.desc&limit=1`, {
+              if (bData && bData[0]) {
+                if (bData[0].pass_id) targetPassId = bData[0].pass_id;
+                if (bData[0].session_id) targetSessionId = bData[0].session_id;
+              }
+            }
+            if (targetPassId) {
+              let targetDiscipline = disciplineId || body.discipline_id || null;
+              if (!targetDiscipline && targetSessionId) {
+                const localSessions = getClassSessionsFromFile();
+                const matched = localSessions.find(s => s.id === targetSessionId);
+                if (matched) {
+                  targetDiscipline = matched.discipline_id || matched.disciplineId;
+                } else if (SUPABASE_URL && supabaseKey) {
+                  const sRes = await fetch(`${SUPABASE_URL}/rest/v1/class_sessions?id=eq.${encodeURIComponent(targetSessionId)}&select=discipline_id`, {
+                    headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+                  });
+                  if (sRes.ok) {
+                    const sData = await sRes.json();
+                    if (sData && sData[0]) targetDiscipline = sData[0].discipline_id;
+                  }
+                }
+              }
+              const aliasMap = {
+                'disc-001': 'disc-pilates',
+                'disc-002': 'disc-barre',
+                'disc-003': 'disc-sculpt-yoga'
+              };
+              const normDiscipline = aliasMap[targetDiscipline] || targetDiscipline;
+
+              if (normDiscipline) {
+                const credUrl = `${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(targetPassId)}&discipline_id=eq.${encodeURIComponent(normDiscipline)}&limit=1`;
+                const credRes = await fetch(credUrl, {
                   headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
                 });
                 if (credRes.ok) {
@@ -2165,6 +2319,7 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
         if (!Array.isArray(localSessions)) localSessions = [];
 
         // Safe background sync with Supabase (non-blocking)
+        // Safe sync with Supabase (authoritative)
         try {
           const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
           if (SUPABASE_URL && supabaseKey) {
@@ -2173,10 +2328,41 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
             });
             if (sRes.ok) {
               const remoteData = await sRes.json();
-              if (Array.isArray(remoteData) && remoteData.length > 0) {
-                const remoteIds = new Set(remoteData.map(r => r.id));
-                const localOnly = localSessions.filter(ls => !remoteIds.has(ls.id) && !remoteData.some(r => (r.start_time === (ls.start_time || ls.startsAt)) && (r.discipline_id === (ls.discipline_id || ls.disciplineId))));
-                localSessions = [...remoteData, ...localOnly];
+              if (Array.isArray(remoteData)) {
+                const normalizedRemote = remoteData.map(r => {
+                  const startTime = r.start_time || r.startsAt;
+                  let date = r.date;
+                  let time = r.time;
+                  if (startTime && (!date || !time)) {
+                    const d = new Date(startTime);
+                    const parts = new Intl.DateTimeFormat('en-CA', {
+                      timeZone: 'Asia/Kolkata',
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false
+                    }).formatToParts(d);
+                    const getP = type => (parts.find(p => p.type === type) || {}).value || '';
+                    date = date || `${getP('year')}-${getP('month')}-${getP('day')}`;
+                    time = time || `${getP('hour')}:${getP('minute')}`;
+                  }
+                  return {
+                    ...r,
+                    date,
+                    time,
+                    startsAt: startTime,
+                    start_time: startTime,
+                    disciplineId: r.discipline_id || r.disciplineId || 'disc-pilates',
+                    discipline_id: r.discipline_id || r.disciplineId || 'disc-pilates',
+                    trainerId: r.trainer_id || r.trainerId || 'trainer-001',
+                    trainer_id: r.trainer_id || r.trainerId || 'trainer-001',
+                    spotsRemaining: r.spotsRemaining ?? r.capacity ?? 6,
+                    durationMinutes: r.durationMinutes || 60
+                  };
+                });
+                localSessions = normalizedRemote;
                 const dataDir = path.join(__dirname, 'data');
                 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
                 fs.writeFileSync(classSessionsFilePath, JSON.stringify(localSessions, null, 2));
@@ -2221,11 +2407,19 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
             const date = s.date || startTime.slice(0, 10);
             const time = s.time || (startTime.includes('T') ? startTime.split('T')[1].slice(0, 5) : '09:00');
 
+            const aliasMap = {
+              'disc-001': 'disc-pilates',
+              'disc-002': 'disc-barre',
+              'disc-003': 'disc-sculpt-yoga'
+            };
+            const rawDisc = s.disciplineId || s.discipline_id || 'disc-pilates';
+            const normalizedDisc = aliasMap[rawDisc] || rawDisc;
+
             return {
               id: cleanId,
               title: s.title || 'Studio Session',
-              discipline_id: s.disciplineId || s.discipline_id || 'disc-pilates',
-              disciplineId: s.disciplineId || s.discipline_id || 'disc-pilates',
+              discipline_id: normalizedDisc,
+              disciplineId: normalizedDisc,
               trainer_id: s.trainerId || s.trainer_id || 'trainer-001',
               trainerId: s.trainerId || s.trainer_id || 'trainer-001',
               date,
@@ -2254,8 +2448,18 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
           if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
           fs.writeFileSync(classSessionsFilePath, JSON.stringify(localSessions, null, 2));
 
-          // Non-blocking Supabase sync attempt
+          // Authoritative Supabase sync attempt
           if (SUPABASE_URL && supabaseKey) {
+            const supabaseRows = newRows.map(r => ({
+              id: r.id,
+              title: r.title || 'Studio Session',
+              discipline_id: r.discipline_id || r.disciplineId || 'disc-pilates',
+              trainer_id: null,
+              start_time: r.start_time || r.startsAt,
+              end_time: r.end_time || new Date(new Date(r.start_time || r.startsAt).getTime() + (r.durationMinutes || 60) * 60000).toISOString(),
+              capacity: Math.min(6, parseInt(r.capacity, 10) || 6),
+              status: r.status || 'scheduled'
+            }));
             fetch(`${SUPABASE_URL}/rest/v1/class_sessions`, {
               method: 'POST',
               headers: {
@@ -2264,7 +2468,9 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
                 'Content-Type': 'application/json',
                 Prefer: 'return=representation'
               },
-              body: JSON.stringify(newRows)
+              body: JSON.stringify(supabaseRows)
+            }).then(res => {
+              if (!res.ok) res.text().then(t => console.error('[Supabase class_sessions insert error]', res.status, t));
             }).catch(() => {});
           }
 
@@ -2277,12 +2483,42 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
           const idx = localSessions.findIndex(ls => ls.id === targetId);
           if (idx >= 0) {
             localSessions[idx] = { ...localSessions[idx], ...(patch || session) };
+            if (patch && patch.date && patch.time) {
+              const dur = patch.durationMinutes || localSessions[idx].durationMinutes || 60;
+              const startTime = `${patch.date}T${patch.time}:00+05:30`;
+              localSessions[idx].start_time = startTime;
+              localSessions[idx].startsAt = startTime;
+              localSessions[idx].date = patch.date;
+              localSessions[idx].time = patch.time;
+              localSessions[idx].end_time = new Date(new Date(startTime).getTime() + dur * 60000).toISOString();
+            }
+            if (patch && patch.disciplineId) {
+              localSessions[idx].discipline_id = patch.disciplineId;
+              localSessions[idx].disciplineId = patch.disciplineId;
+            }
+            if (patch && patch.trainerId) {
+              localSessions[idx].trainer_id = patch.trainerId;
+              localSessions[idx].trainerId = patch.trainerId;
+            }
             const dataDir = path.join(__dirname, 'data');
             if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
             fs.writeFileSync(classSessionsFilePath, JSON.stringify(localSessions, null, 2));
           }
 
           if (SUPABASE_URL && supabaseKey) {
+            const cleanPatch = {};
+            if (patch.title) cleanPatch.title = patch.title;
+            if (patch.disciplineId || patch.discipline_id) cleanPatch.discipline_id = patch.disciplineId || patch.discipline_id;
+            if (patch.trainerId !== undefined || patch.trainer_id !== undefined) cleanPatch.trainer_id = patch.trainerId || patch.trainer_id;
+            if (patch.capacity) cleanPatch.capacity = Math.min(6, parseInt(patch.capacity, 10));
+            if (patch.status) cleanPatch.status = patch.status;
+            if (patch.date && patch.time) {
+              const dur = patch.durationMinutes || 60;
+              const startTime = `${patch.date}T${patch.time}:00+05:30`;
+              cleanPatch.start_time = startTime;
+              cleanPatch.end_time = new Date(new Date(startTime).getTime() + dur * 60000).toISOString();
+            }
+
             fetch(`${SUPABASE_URL}/rest/v1/class_sessions?id=eq.${encodeURIComponent(targetId)}`, {
               method: 'PATCH',
               headers: {
@@ -2290,7 +2526,9 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
                 Authorization: `Bearer ${supabaseKey}`,
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify(patch || {})
+              body: JSON.stringify(cleanPatch)
+            }).then(res => {
+              if (!res.ok) res.text().then(t => console.error('[Supabase class_sessions patch error]', res.status, t));
             }).catch(() => {});
           }
 
@@ -2343,22 +2581,6 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
         if (!cleanEmail) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           return res.end(JSON.stringify({ isMember: false, error: 'Email is required' }));
-        }
-
-        // Demo accounts
-        const demoEmails = [
-          'studio.admin@plashpilates.com',
-          'admin@plashpilates.com',
-          'aisha.kapoor@example.com',
-          'aisha@plash.com',
-          'partner@physicq57.com',
-          'coach@physicq57.com',
-          'trainer@plashpilates.com',
-          'master.trainer@plashpilates.com'
-        ];
-        if (demoEmails.includes(cleanEmail)) {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify({ exists: true, isMember: true }));
         }
 
         const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;

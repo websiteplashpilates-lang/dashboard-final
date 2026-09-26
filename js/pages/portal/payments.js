@@ -11,7 +11,7 @@ import * as auth from '../../core/auth.js';
 import { createStatCard } from '../../components/stat-card.js';
 import { createDataTable } from '../../components/data-table.js';
 import { createEmptyState } from '../../components/empty-state.js';
-import { openReceiptModal } from '../../components/receipt-modal.js';
+import { openReceiptModal, downloadReceipt } from '../../components/receipt-modal.js';
 import { showToast } from '../../components/toast.js';
 
 /**
@@ -245,6 +245,27 @@ export async function render(container) {
             openReceiptModal(row.raw);
           });
 
+          const downloadBtn = createElement('button', {
+            className: 'btn btn-outline btn-sm',
+            attributes: { type: 'button', title: 'Download Official Tax Invoice PDF' },
+            text: 'Download'
+          });
+          downloadBtn.prepend(createElement('i', { attributes: { 'data-lucide': 'download' }, style: 'width: 14px; height: 14px; margin-right: 4px;' }));
+          downloadBtn.addEventListener('click', async () => {
+            downloadBtn.disabled = true;
+            const origHTML = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = '<i data-lucide="loader-2" style="width: 14px; height: 14px; animation: spin 1s linear infinite;"></i>';
+            try {
+              await downloadReceipt(row.raw);
+            } finally {
+              downloadBtn.disabled = false;
+              downloadBtn.innerHTML = origHTML;
+              if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons({ root: downloadBtn });
+              }
+            }
+          });
+
           const emailBtn = createElement('button', {
             className: 'btn btn-secondary btn-sm',
             attributes: { type: 'button', title: 'Email Official Tax Invoice Receipt' },
@@ -282,7 +303,7 @@ export async function render(container) {
             }
           });
 
-          group.append(viewBtn, emailBtn);
+          group.append(viewBtn, downloadBtn, emailBtn);
           return group;
         }
       }

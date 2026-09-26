@@ -1,33 +1,48 @@
 /* ============================================================
-   PLASH PILATES — Tabs
+   PLASH PILATES — Tabs (Luxury Studio Filter Pills)
    ============================================================ */
 .tab-bar {
   display: flex;
-  border-bottom: 1px solid var(--ink-10);
-  margin-bottom: var(--space-6);
-  gap: 0;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: var(--space-8);
+  border-bottom: none;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  padding: 4px 2px;
 }
 .tab-item {
-  padding: var(--space-3) var(--space-5);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  color: var(--ink-50);
-  border-bottom: 2px solid transparent;
+  background: #FFFFFF;
+  border: 1px solid rgba(43, 40, 47, 0.14);
+  color: #565243;
+  padding: 0.6rem 1.4rem;
+  border-radius: 9999px;
+  font-size: 0.88rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all var(--t-fast);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(43, 40, 47, 0.04);
   white-space: nowrap;
-  background: none;
-  border-top: none;
-  border-left: none;
-  border-right: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
-.tab-item:hover { color: var(--ink); }
+.tab-item:hover {
+  background: #FDFBF7;
+  color: var(--ink, #2B282F);
+  border-color: rgba(43, 40, 47, 0.3);
+  transform: translateY(-1px);
+}
 .tab-item.active {
-  color: var(--ink);
-  border-bottom-color: var(--rust);
-  font-weight: var(--weight-semibold);
+  background: var(--rust, #BE603C);
+  color: #FFFFFF;
+  border-color: var(--rust, #BE603C);
+  box-shadow: 0 3px 10px rgba(190, 96, 60, 0.28);
 }
 .tab-panel { display: none; }
-.tab-panel.active { display: block; }
+.tab-panel.active { display: block; animation: fadeInTab 0.25s ease-out; }
+
+@keyframes fadeInTab {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

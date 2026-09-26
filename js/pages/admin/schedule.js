@@ -24,6 +24,11 @@ let currentWeekOffset = 0; // 0 = current week, 1 = next week, -1 = previous wee
 export async function render(container) {
   clearChildren(container);
 
+  // Authoritative live sync of class sessions from Supabase & server
+  try {
+    await store.syncClassSessions();
+  } catch (_) {}
+
   const page = createElement('div', { className: 'page-container' });
 
   // 1. Page Header with Actions
@@ -807,10 +812,10 @@ function openRecurringRuleModal(rule, onSuccess) {
     try {
       if (isEditing) {
         store.updateRecurringRule(rule.id, payload);
-        showToast('Recurring rule updated.', 'success');
+        showToast('Recurring rule updated and synced across timetable matrix.', 'success');
       } else {
         store.addRecurringRule(payload);
-        showToast('Recurring rule created. You can sync it to the calendar anytime.', 'success');
+        showToast('Recurring rule created and populated across timetable matrix.', 'success');
       }
       modal.close();
       onSuccess();

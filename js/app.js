@@ -173,9 +173,13 @@ async function initApp() {
     document.body.classList.add('auth-layout');
     document.documentElement.classList.add('auth-layout');
     if (sidebarEl) sidebarEl.style.display = 'none';
+    const mobileHeader = document.getElementById('mobile-header');
+    if (mobileHeader) mobileHeader.style.display = 'none';
   } else if (sidebarEl) {
     document.body.classList.remove('auth-layout');
     document.documentElement.classList.remove('auth-layout');
+    const mobileHeader = document.getElementById('mobile-header');
+    if (mobileHeader) mobileHeader.style.display = '';
     renderSidebar(sidebarEl);
   }
 
@@ -243,9 +247,20 @@ async function initApp() {
 
   // Listen to route changes to update sidebar active highlight and layout
   events.on(EVENT.ROUTE_CHANGED, () => {
-    if (sidebarEl) {
-      sidebarEl.style.display = '';
-      renderSidebar(sidebarEl);
+    const isNowAuth = auth.isAuthenticated();
+    const curHash = window.location.hash || '';
+    const isAuthRoute = !curHash || curHash === '#/' || curHash.startsWith('#/login') || curHash.startsWith('#/signup') || curHash.startsWith('#/reset-password') || curHash.startsWith('#/forgot-password');
+    const mobileHeader = document.getElementById('mobile-header');
+
+    if (!isNowAuth || isAuthRoute) {
+      if (sidebarEl) sidebarEl.style.display = 'none';
+      if (mobileHeader) mobileHeader.style.display = 'none';
+    } else {
+      if (sidebarEl) {
+        sidebarEl.style.display = '';
+        renderSidebar(sidebarEl);
+      }
+      if (mobileHeader) mobileHeader.style.display = '';
     }
   });
 

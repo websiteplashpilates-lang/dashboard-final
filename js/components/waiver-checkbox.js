@@ -1,24 +1,27 @@
 /**
- * Plash Pilates — Waiver Checkbox Component
- * Waiver acceptance gate required before package purchase.
- * Links to full liability waiver modal dialog.
+ * Plash Pilates — Dynamic Multi-Studio Waiver Checkbox Component
+ * Displays the appropriate legal waiver depending on cart contents:
+ * - Barre package -> Physique 57 / AMP Fitness LLP Customer Waiver & Policies
+ * - Plash package -> Plash Pilates Studio Member Liability Waiver & Privacy Policy
+ * - Combined package -> Dual Studio Waiver (both Plash & Physique 57 tabs)
  * @module waiver-checkbox
  */
 
-import { createElement } from '../utils/dom.js';
+import { createElement, clearChildren } from '../utils/dom.js';
 import { openModal } from './modal.js';
 import * as store from '../core/store.js';
 
 /**
- * Create a waiver acceptance checkbox component.
+ * Create a dynamic waiver acceptance checkbox component.
  * @param {Object} [options]
+ * @param {Object} [options.packageItem] - The package item currently in cart
  * @param {Function} [options.onChange] - Callback when checked state changes: (checked) => void
- * @returns {HTMLElement & { isChecked: () => boolean, getWaiverId: () => string }}
+ * @returns {HTMLElement & { isChecked: () => boolean, setChecked: (val: boolean) => void, getWaiverId: () => string, setPackage: (pkg: Object) => void }}
  */
-export function createWaiverCheckbox({ onChange } = {}) {
+export function createWaiverCheckbox({ onChange, packageItem } = {}) {
   const container = createElement('div', {
     className: 'waiver-section',
-    style: 'background: var(--stone); border-radius: var(--radius-sm); padding: var(--space-4); margin-bottom: var(--space-6);'
+    style: 'background: var(--stone); border-radius: var(--radius-sm); padding: var(--space-4); margin-bottom: var(--space-6); border: 1.5px solid var(--ink-10); transition: all var(--transition-fast);'
   });
 
   const wrapper = createElement('div', {
@@ -26,12 +29,7 @@ export function createWaiverCheckbox({ onChange } = {}) {
     style: 'display: flex; align-items: flex-start; gap: var(--space-3);'
   });
 
-  const currentWaiver = store.getCurrentWaiver() || {
-    id: 'waiver-1.0',
-    version: '1.0',
-    title: 'Liability Waiver & Health Declaration',
-    content: 'By participating in classes at Plash Pilates, you acknowledge the physical demands and inherent risks of Pilates, Barre, and Sculpt Yoga...'
-  };
+  let currentConfig = store.getWaiverConfigForPackage(packageItem);
 
   const input = createElement('input', {
     attributes: {
@@ -49,22 +47,30 @@ export function createWaiverCheckbox({ onChange } = {}) {
     style: 'font-size: var(--text-sm); line-height: 1.5; color: var(--ink); cursor: pointer; user-select: none; flex: 1;'
   });
 
-  label.appendChild(document.createTextNode('I have read, understood, and agree to the '));
+  function renderLabelContent() {
+    clearChildren(label);
+    label.appendChild(document.createTextNode('I have read, understood, and agree to the '));
 
-  const link = createElement('button', {
-    attributes: { type: 'button' },
-    style: 'background: none; border: none; padding: 0; color: var(--rust); text-decoration: underline; cursor: pointer; font-size: inherit; font-family: inherit; font-weight: var(--weight-semibold); display: inline;',
-    text: `Liability Waiver & Health Declaration (v${currentWaiver.version})`
-  });
+    const link = createElement('button', {
+      attributes: { type: 'button' },
+      style: 'background: none; border: none; padding: 0; color: var(--rust); text-decoration: underline; cursor: pointer; font-size: inherit; font-family: inherit; font-weight: var(--weight-semibold); display: inline;',
+      text: currentConfig.linkText || currentConfig.title
+    });
 
-  link.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    openWaiverModal(currentWaiver);
-  });
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openDynamicWaiverModal(currentConfig);
+    });
 
-  label.appendChild(link);
-  label.appendChild(document.createTextNode(' as well as the studio safety rules.'));
+    label.appendChild(link);
+    const suffix = currentConfig.type === 'combined'
+      ? ' as well as both studio safety rules.'
+      : ' as well as the studio safety rules.';
+    label.appendChild(document.createTextNode(suffix));
+  }
+
+  renderLabelContent();
 
   wrapper.append(input, label);
   container.appendChild(wrapper);
@@ -84,26 +90,102 @@ export function createWaiverCheckbox({ onChange } = {}) {
     if (onChange) onChange(input.checked);
   });
 
-  function openWaiverModal(waiver) {
-    const content = createElement('div', { style: 'font-size: var(--text-sm); line-height: 1.7; color: var(--ink-80); max-height: 50vh; overflow-y: auto; padding-right: var(--space-2);' });
-
-    const p = createElement('p', {
-      style: 'white-space: pre-line;',
-      text: waiver.bodyText || waiver.content
+  function openDynamicWaiverModal(config) {
+    const modalContent = createElement('div', {
+      style: 'display: flex; flex-direction: column; gap: var(--space-4); max-height: 65vh;'
     });
-    content.appendChild(p);
+
+    let activeSubIndex = 0;
+    const subWaivers = config.subWaivers || [{
+      title: config.waiver?.title || config.title,
+      version: config.waiver?.version || '1.0',
+      content: config.waiver?.bodyText || config.waiver?.content || ''
+    }];
+
+    // If combined, add tab strip
+    if (config.type === 'combined' && subWaivers.length > 1) {
+      const tabStrip = createElement('div', {
+        className: 'tab-strip',
+        style: 'display: flex; gap: var(--space-2); border-bottom: 1px solid var(--ink-10); padding-bottom: var(--space-2);'
+      });
+
+      const tabButtons = [];
+
+      subWaivers.forEach((sw, idx) => {
+        const tabBtn = createElement('button', {
+          attributes: { type: 'button' },
+          style: `padding: 6px 14px; font-size: var(--text-xs); font-weight: var(--weight-semibold); border-radius: var(--radius-sm); border: 1px solid ${idx === 0 ? 'var(--rust)' : 'var(--ink-10)'}; background: ${idx === 0 ? 'var(--rust)' : 'var(--stone)'}; color: ${idx === 0 ? '#fff' : 'var(--ink-70)'}; cursor: pointer; transition: all var(--transition-fast);`,
+          text: sw.tabTitle || sw.title
+        });
+
+        tabBtn.addEventListener('click', () => {
+          activeSubIndex = idx;
+          tabButtons.forEach((btn, bIdx) => {
+            if (bIdx === idx) {
+              btn.style.background = 'var(--rust)';
+              btn.style.borderColor = 'var(--rust)';
+              btn.style.color = '#fff';
+            } else {
+              btn.style.background = 'var(--stone)';
+              btn.style.borderColor = 'var(--ink-10)';
+              btn.style.color = 'var(--ink-70)';
+            }
+          });
+          renderActiveText();
+        });
+
+        tabButtons.push(tabBtn);
+        tabStrip.appendChild(tabBtn);
+      });
+
+      modalContent.appendChild(tabStrip);
+    }
+
+    const scrollBox = createElement('div', {
+      style: 'font-size: var(--text-sm); line-height: 1.7; color: var(--ink-80); overflow-y: auto; padding-right: var(--space-3); background: #ffffff; border: 1px solid var(--ink-10); border-radius: var(--radius-sm); padding: var(--space-4); max-height: 48vh;'
+    });
+
+    const activeTitle = createElement('div', {
+      style: 'font-weight: var(--weight-bold); font-size: var(--text-sm); color: var(--ink); margin-bottom: var(--space-3); padding-bottom: var(--space-2); border-bottom: 1px solid var(--ink-10);'
+    });
+
+    const activeText = createElement('p', {
+      style: 'white-space: pre-line; margin: 0; font-size: 13px; line-height: 1.65; color: var(--ink-80);'
+    });
+
+    scrollBox.append(activeTitle, activeText);
+    modalContent.appendChild(scrollBox);
+
+    function renderActiveText() {
+      const current = subWaivers[activeSubIndex] || subWaivers[0];
+      activeTitle.textContent = `${current.title} (v${current.version || '1.0'})`;
+      activeText.textContent = current.content;
+      scrollBox.scrollTop = 0;
+    }
+
+    renderActiveText();
+
+    let acceptLabel = 'I Accept Waiver';
+    if (config.type === 'combined') {
+      acceptLabel = 'I Accept Both Waivers';
+    } else if (config.type === 'barre') {
+      acceptLabel = 'I Accept Physique 57 Waiver';
+    } else {
+      acceptLabel = 'I Accept Plash Pilates Waiver';
+    }
 
     const acceptBtn = createElement('button', {
-      className: 'btn btn-primary btn-sm',
+      className: 'btn btn-primary',
       attributes: { type: 'button' },
-      text: 'I Accept Waiver'
+      style: 'justify-content: center;',
+      text: acceptLabel
     });
 
     const modal = openModal({
-      title: `${waiver.title} (v${waiver.version})`,
-      content,
+      title: config.title,
+      content: modalContent,
       actions: [acceptBtn],
-      maxWidth: '650px'
+      maxWidth: '680px'
     });
 
     acceptBtn.addEventListener('click', () => {
@@ -120,7 +202,11 @@ export function createWaiverCheckbox({ onChange } = {}) {
     updateVisualState();
     if (onChange) onChange(input.checked);
   };
-  container.getWaiverId = () => currentWaiver.id;
+  container.getWaiverId = () => currentConfig.waiverId;
+  container.setPackage = (pkg) => {
+    currentConfig = store.getWaiverConfigForPackage(pkg);
+    renderLabelContent();
+  };
 
   return container;
 }

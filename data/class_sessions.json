@@ -1,603 +1,250 @@
 [
   {
-    "id": "sess-001",
-    "title": "Morning Reformer Foundations",
-    "discipline_id": "disc-pilates",
-    "trainer_id": null,
-    "start_time": "2026-09-17T22:57:47.58386+00:00",
-    "end_time": "2026-09-17T23:57:47.58386+00:00",
-    "capacity": 6,
-    "status": "scheduled",
-    "notes": null,
-    "created_at": "2026-09-17T20:57:47.58386+00:00",
-    "trainer": null,
-    "discipline": {
-      "id": "disc-pilates",
-      "name": "Reformer Pilates",
-      "created_at": "2026-09-17T20:57:47.58386+00:00",
-      "description": "Precision-based Reformer training combining controlled movements with spring resistance for total-body conditioning, posture correction, and injury prevention."
-    },
-    "bookings": [
-      {
-        "count": 0
-      }
-    ]
-  },
-  {
-    "id": "sess-002",
-    "title": "Dynamic Reformer Flow",
-    "discipline_id": "disc-pilates",
-    "trainer_id": null,
-    "start_time": "2026-09-18T01:57:47.58386+00:00",
-    "end_time": "2026-09-18T02:57:47.58386+00:00",
-    "capacity": 6,
-    "status": "scheduled",
-    "notes": null,
-    "created_at": "2026-09-17T20:57:47.58386+00:00",
-    "trainer": null,
-    "discipline": {
-      "id": "disc-pilates",
-      "name": "Reformer Pilates",
-      "created_at": "2026-09-17T20:57:47.58386+00:00",
-      "description": "Precision-based Reformer training combining controlled movements with spring resistance for total-body conditioning, posture correction, and injury prevention."
-    },
-    "bookings": [
-      {
-        "count": 0
-      }
-    ]
-  },
-  {
-    "id": "suite-d-1789783201616-past",
-    "title": "Past Session Test",
-    "discipline_id": "disc-pilates",
-    "trainer_id": null,
-    "start_time": "2026-09-18T02:00:01.616+00:00",
-    "end_time": "2026-09-18T03:00:01.616+00:00",
-    "capacity": 6,
-    "status": "completed",
-    "notes": null,
-    "created_at": "2026-09-19T02:00:01.686251+00:00",
-    "trainer": null,
-    "discipline": {
-      "id": "disc-pilates",
-      "name": "Reformer Pilates",
-      "created_at": "2026-09-17T20:57:47.58386+00:00",
-      "description": "Precision-based Reformer training combining controlled movements with spring resistance for total-body conditioning, posture correction, and injury prevention."
-    },
-    "bookings": [
-      {
-        "count": 0
-      }
-    ]
-  },
-  {
-    "id": "sess-003",
-    "title": "Sculpt Yoga Conditioning",
-    "discipline_id": "disc-sculpt-yoga",
-    "trainer_id": null,
-    "start_time": "2026-09-18T22:57:47.58386+00:00",
-    "end_time": "2026-09-18T23:57:47.58386+00:00",
-    "capacity": 6,
-    "status": "scheduled",
-    "notes": null,
-    "created_at": "2026-09-17T20:57:47.58386+00:00",
-    "trainer": null,
-    "discipline": {
-      "id": "disc-sculpt-yoga",
-      "name": "Sculpt Yoga",
-      "created_at": "2026-09-17T20:57:47.58386+00:00",
-      "description": "A dynamic fusion of yoga flows and strength training, using body weight and light resistance to sculpt lean muscle while improving flexibility."
-    },
-    "bookings": [
-      {
-        "count": 0
-      }
-    ]
-  },
-  {
-    "id": "sess-004",
-    "title": "Physicq 57 Barre Burn",
-    "discipline_id": "disc-barre",
-    "trainer_id": null,
-    "start_time": "2026-09-19T00:57:47.58386+00:00",
-    "end_time": "2026-09-19T01:57:47.58386+00:00",
-    "capacity": 6,
-    "status": "scheduled",
-    "notes": null,
-    "created_at": "2026-09-17T20:57:47.58386+00:00",
-    "trainer": null,
-    "discipline": {
-      "id": "disc-barre",
-      "name": "Barre Conditioning",
-      "created_at": "2026-09-17T20:57:47.58386+00:00",
-      "description": "Ballet-inspired low-impact workout blending isometric holds, small pulses, and stretching. Delivered by Physicq 57 on weekends."
-    },
-    "bookings": [
-      {
-        "count": 0
-      }
-    ]
-  },
-  {
-    "id": "suite-d-1789783201616-late",
-    "title": "Late Cancel Test",
-    "discipline_id": "disc-pilates",
-    "trainer_id": null,
-    "start_time": "2026-09-19T03:30:01.616+00:00",
-    "end_time": "2026-09-19T04:30:01.616+00:00",
-    "capacity": 6,
-    "status": "scheduled",
-    "notes": null,
-    "created_at": "2026-09-19T02:00:01.800529+00:00",
-    "trainer": null,
-    "discipline": {
-      "id": "disc-pilates",
-      "name": "Reformer Pilates",
-      "created_at": "2026-09-17T20:57:47.58386+00:00",
-      "description": "Precision-based Reformer training combining controlled movements with spring resistance for total-body conditioning, posture correction, and injury prevention."
-    },
-    "bookings": [
-      {
-        "count": 0
-      }
-    ]
-  },
-  {
-    "id": "sess-53ddfe00",
-    "title": "Barre Conditioning",
-    "discipline_id": "disc-barre",
-    "trainer_id": null,
-    "start_time": "2026-09-20T03:30:00+00:00",
-    "end_time": "2026-09-20T04:30:00+00:00",
-    "capacity": 6,
-    "status": "scheduled",
-    "notes": null,
-    "created_at": "2026-09-19T21:44:31.529276+00:00",
-    "trainer": null,
-    "discipline": {
-      "id": "disc-barre",
-      "name": "Barre Conditioning",
-      "created_at": "2026-09-17T20:57:47.58386+00:00",
-      "description": "Ballet-inspired low-impact workout blending isometric holds, small pulses, and stretching. Delivered by Physicq 57 on weekends."
-    },
-    "bookings": [
-      {
-        "count": 0
-      }
-    ]
-  },
-  {
-    "id": "sess-fdce8931",
-    "title": "Barre Conditioning",
-    "discipline_id": "disc-barre",
-    "trainer_id": null,
-    "start_time": "2026-09-21T03:30:00+00:00",
-    "end_time": "2026-09-21T04:30:00+00:00",
-    "capacity": 6,
-    "status": "scheduled",
-    "notes": null,
-    "created_at": "2026-09-19T21:44:39.460261+00:00",
-    "trainer": null,
-    "discipline": {
-      "id": "disc-barre",
-      "name": "Barre Conditioning",
-      "created_at": "2026-09-17T20:57:47.58386+00:00",
-      "description": "Ballet-inspired low-impact workout blending isometric holds, small pulses, and stretching. Delivered by Physicq 57 on weekends."
-    },
-    "bookings": [
-      {
-        "count": 0
-      }
-    ]
-  },
-  {
-    "id": "sess-ea000e08",
-    "title": "Barre Conditioning",
-    "discipline_id": "disc-barre",
-    "trainer_id": null,
-    "start_time": "2026-09-21T03:30:00+00:00",
-    "end_time": "2026-09-21T04:30:00+00:00",
-    "capacity": 6,
-    "status": "scheduled",
-    "notes": null,
-    "created_at": "2026-09-19T21:44:38.108099+00:00",
-    "trainer": null,
-    "discipline": {
-      "id": "disc-barre",
-      "name": "Barre Conditioning",
-      "created_at": "2026-09-17T20:57:47.58386+00:00",
-      "description": "Ballet-inspired low-impact workout blending isometric holds, small pulses, and stretching. Delivered by Physicq 57 on weekends."
-    },
-    "bookings": [
-      {
-        "count": 0
-      }
-    ]
-  },
-  {
-    "id": "sess-acff0b42",
-    "title": "Barre Conditioning",
-    "discipline_id": "disc-barre",
-    "trainer_id": null,
-    "start_time": "2026-09-21T03:30:00+00:00",
-    "end_time": "2026-09-21T04:30:00+00:00",
-    "capacity": 6,
-    "status": "scheduled",
-    "notes": null,
-    "created_at": "2026-09-19T21:44:39.938688+00:00",
-    "trainer": null,
-    "discipline": {
-      "id": "disc-barre",
-      "name": "Barre Conditioning",
-      "created_at": "2026-09-17T20:57:47.58386+00:00",
-      "description": "Ballet-inspired low-impact workout blending isometric holds, small pulses, and stretching. Delivered by Physicq 57 on weekends."
-    },
-    "bookings": [
-      {
-        "count": 0
-      }
-    ]
-  },
-  {
-    "id": "sess-b8366f9d",
-    "title": "Reformer Pilates",
-    "discipline_id": "disc-pilates",
-    "trainer_id": null,
-    "start_time": "2026-09-21T06:30:00+00:00",
-    "end_time": "2026-09-21T07:30:00+00:00",
-    "capacity": 6,
-    "status": "scheduled",
-    "notes": null,
-    "created_at": "2026-09-20T05:12:59.570901+00:00",
-    "trainer": null,
-    "discipline": {
-      "id": "disc-pilates",
-      "name": "Reformer Pilates",
-      "created_at": "2026-09-17T20:57:47.58386+00:00",
-      "description": "Precision-based Reformer training combining controlled movements with spring resistance for total-body conditioning, posture correction, and injury prevention."
-    },
-    "bookings": [
-      {
-        "count": 0
-      }
-    ]
-  },
-  {
-    "id": "suite-d-1789783201616-cap1",
-    "title": "Cap 1 Overflow Test",
-    "discipline_id": "disc-pilates",
-    "trainer_id": null,
-    "start_time": "2026-09-22T02:00:01.616+00:00",
-    "end_time": "2026-09-22T03:00:01.616+00:00",
-    "capacity": 1,
-    "status": "scheduled",
-    "notes": null,
-    "created_at": "2026-09-19T02:00:02.044089+00:00",
-    "trainer": null,
-    "discipline": {
-      "id": "disc-pilates",
-      "name": "Reformer Pilates",
-      "created_at": "2026-09-17T20:57:47.58386+00:00",
-      "description": "Precision-based Reformer training combining controlled movements with spring resistance for total-body conditioning, posture correction, and injury prevention."
-    },
-    "bookings": [
-      {
-        "count": 0
-      }
-    ]
-  },
-  {
-    "id": "sess-6d947fdb",
-    "title": "Barre Conditioning",
-    "discipline_id": "disc-barre",
-    "trainer_id": null,
-    "start_time": "2026-09-24T03:30:00+00:00",
-    "end_time": "2026-09-24T04:30:00+00:00",
-    "capacity": 6,
-    "status": "scheduled",
-    "notes": null,
-    "created_at": "2026-09-20T04:28:54.890692+00:00",
-    "trainer": null,
-    "discipline": {
-      "id": "disc-barre",
-      "name": "Barre Conditioning",
-      "created_at": "2026-09-17T20:57:47.58386+00:00",
-      "description": "Ballet-inspired low-impact workout blending isometric holds, small pulses, and stretching. Delivered by Physicq 57 on weekends."
-    },
-    "bookings": [
-      {
-        "count": 0
-      }
-    ]
-  },
-  {
-    "id": "sess-mon-21-0900",
-    "title": "Barre Conditioning",
-    "discipline_id": "disc-barre",
-    "disciplineId": "disc-barre",
-    "trainer_id": "trainer-004",
-    "trainerId": "trainer-004",
-    "date": "2026-09-21",
-    "time": "09:00",
-    "start_time": "2026-09-21T09:00:00+05:30",
-    "startsAt": "2026-09-21T09:00:00+05:30",
-    "end_time": "2026-09-21T10:00:00+05:30",
-    "durationMinutes": 60,
-    "capacity": 6,
-    "spotsRemaining": 6,
-    "spotsLeft": 6,
-    "status": "scheduled"
-  },
-  {
-    "id": "sess-mon-21-1200",
-    "title": "Reformer Pilates",
-    "discipline_id": "disc-pilates",
-    "disciplineId": "disc-pilates",
-    "trainer_id": "trainer-001",
-    "trainerId": "trainer-001",
-    "date": "2026-09-21",
-    "time": "12:00",
-    "start_time": "2026-09-21T12:00:00+05:30",
-    "startsAt": "2026-09-21T12:00:00+05:30",
-    "end_time": "2026-09-21T13:00:00+05:30",
-    "durationMinutes": 60,
-    "capacity": 6,
-    "spotsRemaining": 6,
-    "spotsLeft": 6,
-    "status": "scheduled"
-  },
-  {
-    "id": "sess-tue-22-0730",
-    "title": "Reformer Pilates",
-    "discipline_id": "disc-pilates",
-    "disciplineId": "disc-pilates",
-    "trainer_id": "trainer-001",
-    "trainerId": "trainer-001",
-    "date": "2026-09-22",
-    "time": "07:30",
-    "start_time": "2026-09-22T07:30:00+05:30",
-    "startsAt": "2026-09-22T07:30:00+05:30",
-    "end_time": "2026-09-22T08:30:00+05:30",
-    "durationMinutes": 60,
-    "capacity": 6,
-    "spotsRemaining": 1,
-    "spotsLeft": 1,
-    "status": "scheduled"
-  },
-  {
-    "id": "sess-wed-23-0700",
-    "title": "Reformer Pilates",
-    "discipline_id": "disc-pilates",
-    "disciplineId": "disc-pilates",
-    "trainer_id": "trainer-001",
-    "trainerId": "trainer-001",
-    "date": "2026-09-23",
-    "time": "07:00",
-    "start_time": "2026-09-23T07:00:00+05:30",
-    "startsAt": "2026-09-23T07:00:00+05:30",
-    "end_time": "2026-09-23T08:00:00+05:30",
-    "durationMinutes": 60,
-    "capacity": 6,
-    "spotsRemaining": 6,
-    "spotsLeft": 6,
-    "status": "scheduled"
-  },
-  {
-    "id": "sess-wed-23-1100",
-    "title": "Reformer Pilates",
-    "discipline_id": "disc-pilates",
-    "disciplineId": "disc-pilates",
-    "trainer_id": "trainer-002",
-    "trainerId": "trainer-002",
-    "date": "2026-09-23",
-    "time": "11:00",
-    "start_time": "2026-09-23T11:00:00+05:30",
-    "startsAt": "2026-09-23T11:00:00+05:30",
-    "end_time": "2026-09-23T12:00:00+05:30",
-    "durationMinutes": 60,
-    "capacity": 6,
-    "spotsRemaining": 6,
-    "spotsLeft": 6,
-    "status": "scheduled"
-  },
-  {
-    "id": "sess-thu-24-0900",
-    "title": "Barre Conditioning",
-    "discipline_id": "disc-barre",
-    "disciplineId": "disc-barre",
-    "trainer_id": "trainer-004",
-    "trainerId": "trainer-004",
-    "date": "2026-09-24",
-    "time": "09:00",
-    "start_time": "2026-09-24T09:00:00+05:30",
-    "startsAt": "2026-09-24T09:00:00+05:30",
-    "end_time": "2026-09-24T10:00:00+05:30",
-    "durationMinutes": 60,
-    "capacity": 6,
-    "spotsRemaining": 6,
-    "spotsLeft": 6,
-    "status": "scheduled"
-  },
-  {
-    "id": "session-109",
-    "title": "Morning Class Far",
-    "discipline_id": "disc-pilates",
-    "disciplineId": "disc-pilates",
-    "trainer_id": "trainer-001",
-    "trainerId": "trainer-001",
-    "date": "2026-09-23",
-    "time": "09:00",
-    "start_time": "2026-09-23T17:07:52.596Z",
-    "startsAt": "2026-09-23T17:07:52.596Z",
-    "end_time": "2026-09-23T18:07:52.596Z",
-    "durationMinutes": 60,
-    "capacity": 6,
-    "spotsRemaining": 6,
-    "spotsLeft": 6,
-    "status": "scheduled"
-  },
-  {
     "id": "session-106",
-    "title": "Precision Reformer Testing Batch",
-    "discipline_id": "disc-pilates",
-    "disciplineId": "disc-pilates",
+    "title": "Monday Morning Reformer Flow",
+    "discipline_id": "disc-barre",
     "trainer_id": "trainer-001",
-    "trainerId": "trainer-001",
-    "date": "2026-10-01",
-    "time": "07:00",
-    "start_time": "2026-10-01T01:30:00.000Z",
-    "startsAt": "2026-10-01T01:30:00.000Z",
-    "end_time": "2026-10-01T02:30:00.000Z",
-    "durationMinutes": 60,
+    "start_time": "2026-09-27T03:30:00+00:00",
+    "end_time": "2026-09-27T04:30:00+00:00",
     "capacity": 6,
+    "status": "scheduled",
+    "notes": null,
+    "created_at": "2026-09-26T03:52:24.239388+00:00",
+    "trainer": null,
+    "discipline": {
+      "id": "disc-barre",
+      "name": "Barre Conditioning",
+      "created_at": "2026-09-17T20:57:47.58386+00:00",
+      "description": "Ballet-inspired low-impact workout blending isometric holds, small pulses, and stretching. Delivered by Physicq 57 on weekends."
+    },
+    "bookings": [
+      {
+        "count": 1
+      }
+    ],
+    "date": "2026-09-27",
+    "time": "09:00",
+    "startsAt": "2026-09-27T03:30:00+00:00",
+    "disciplineId": "disc-barre",
+    "trainerId": "trainer-001",
     "spotsRemaining": 6,
-    "spotsLeft": 6,
-    "status": "scheduled"
+    "durationMinutes": 60
+  },
+  {
+    "id": "session-102",
+    "title": "Monday Morning Reformer Flow",
+    "discipline_id": "disc-barre",
+    "trainer_id": "trainer-001",
+    "start_time": "2026-09-28T03:30:00+00:00",
+    "end_time": "2026-09-28T04:30:00+00:00",
+    "capacity": 6,
+    "status": "scheduled",
+    "notes": null,
+    "created_at": "2026-09-26T03:52:24.239388+00:00",
+    "trainer": null,
+    "discipline": {
+      "id": "disc-barre",
+      "name": "Barre Conditioning",
+      "created_at": "2026-09-17T20:57:47.58386+00:00",
+      "description": "Ballet-inspired low-impact workout blending isometric holds, small pulses, and stretching. Delivered by Physicq 57 on weekends."
+    },
+    "bookings": [
+      {
+        "count": 0
+      }
+    ],
+    "date": "2026-09-28",
+    "time": "09:00",
+    "startsAt": "2026-09-28T03:30:00+00:00",
+    "disciplineId": "disc-barre",
+    "trainerId": "trainer-001",
+    "spotsRemaining": 6,
+    "durationMinutes": 60
   },
   {
     "id": "session-107",
-    "title": "Yesterday Class",
-    "discipline_id": "disc-pilates",
-    "disciplineId": "disc-pilates",
+    "title": "Monday Morning Reformer Flow",
+    "discipline_id": "disc-barre",
     "trainer_id": "trainer-001",
-    "trainerId": "trainer-001",
-    "date": "2026-09-22",
-    "time": "07:37",
-    "start_time": "2026-09-22T02:07:52.592Z",
-    "startsAt": "2026-09-22T02:07:52.592Z",
-    "end_time": "2026-09-22T03:07:52.592Z",
-    "durationMinutes": 60,
+    "start_time": "2026-10-04T03:30:00+00:00",
+    "end_time": "2026-10-04T04:30:00+00:00",
     "capacity": 6,
+    "status": "scheduled",
+    "notes": null,
+    "created_at": "2026-09-26T03:52:24.239388+00:00",
+    "trainer": null,
+    "discipline": {
+      "id": "disc-barre",
+      "name": "Barre Conditioning",
+      "created_at": "2026-09-17T20:57:47.58386+00:00",
+      "description": "Ballet-inspired low-impact workout blending isometric holds, small pulses, and stretching. Delivered by Physicq 57 on weekends."
+    },
+    "bookings": [
+      {
+        "count": 0
+      }
+    ],
+    "date": "2026-10-04",
+    "time": "09:00",
+    "startsAt": "2026-10-04T03:30:00+00:00",
+    "disciplineId": "disc-barre",
+    "trainerId": "trainer-001",
     "spotsRemaining": 6,
-    "spotsLeft": 6,
-    "status": "scheduled"
+    "durationMinutes": 60
+  },
+  {
+    "id": "session-103",
+    "title": "Monday Morning Reformer Flow",
+    "discipline_id": "disc-barre",
+    "trainer_id": "trainer-001",
+    "start_time": "2026-10-05T03:30:00+00:00",
+    "end_time": "2026-10-05T04:30:00+00:00",
+    "capacity": 6,
+    "status": "scheduled",
+    "notes": null,
+    "created_at": "2026-09-26T03:52:24.239388+00:00",
+    "trainer": null,
+    "discipline": {
+      "id": "disc-barre",
+      "name": "Barre Conditioning",
+      "created_at": "2026-09-17T20:57:47.58386+00:00",
+      "description": "Ballet-inspired low-impact workout blending isometric holds, small pulses, and stretching. Delivered by Physicq 57 on weekends."
+    },
+    "bookings": [
+      {
+        "count": 0
+      }
+    ],
+    "date": "2026-10-05",
+    "time": "09:00",
+    "startsAt": "2026-10-05T03:30:00+00:00",
+    "disciplineId": "disc-barre",
+    "trainerId": "trainer-001",
+    "spotsRemaining": 6,
+    "durationMinutes": 60
   },
   {
     "id": "session-108",
-    "title": "Morning Class Near",
-    "discipline_id": "disc-pilates",
-    "disciplineId": "disc-pilates",
-    "trainer_id": "trainer-001",
-    "trainerId": "trainer-001",
-    "date": "2026-09-23",
-    "time": "08:00",
-    "start_time": "2026-09-23T10:07:52.595Z",
-    "startsAt": "2026-09-23T10:07:52.595Z",
-    "end_time": "2026-09-23T11:07:52.595Z",
-    "durationMinutes": 60,
-    "capacity": 6,
-    "spotsRemaining": 6,
-    "spotsLeft": 6,
-    "status": "scheduled"
-  },
-  {
-    "id": "session-111",
-    "title": "Evening Class Far",
-    "discipline_id": "disc-pilates",
-    "disciplineId": "disc-pilates",
-    "trainer_id": "trainer-001",
-    "trainerId": "trainer-001",
-    "date": "2026-09-23",
-    "time": "18:00",
-    "start_time": "2026-09-23T06:07:52.893Z",
-    "startsAt": "2026-09-23T10:07:52.896Z",
-    "end_time": "2026-09-23T07:07:52.893Z",
-    "durationMinutes": 60,
-    "capacity": 6,
-    "spotsRemaining": 6,
-    "spotsLeft": 6,
-    "status": "scheduled",
-    "bookedCount": 0
-  },
-  {
-    "id": "session-113",
-    "title": "Attendance Test",
-    "discipline_id": "disc-pilates",
-    "disciplineId": "disc-pilates",
-    "trainer_id": "trainer-001",
-    "trainerId": "trainer-001",
-    "date": "2026-09-23",
-    "time": "06:37",
-    "start_time": "2026-09-23T01:07:53.119Z",
-    "startsAt": "2026-09-23T01:07:53.119Z",
-    "end_time": "2026-09-23T02:07:53.119Z",
-    "durationMinutes": 60,
-    "capacity": 6,
-    "spotsRemaining": 6,
-    "spotsLeft": 6,
-    "status": "scheduled"
-  },
-  {
-    "id": "session-115",
-    "title": "Future Cancellation Test",
-    "discipline_id": "disc-pilates",
-    "disciplineId": "disc-pilates",
-    "trainer_id": "trainer-001",
-    "trainerId": "trainer-001",
-    "date": "2026-09-26",
-    "time": "07:37",
-    "start_time": "2026-09-26T02:07:53.195Z",
-    "startsAt": "2026-09-26T02:07:53.195Z",
-    "end_time": "2026-09-26T03:07:53.195Z",
-    "durationMinutes": 60,
-    "capacity": 6,
-    "spotsRemaining": 6,
-    "spotsLeft": 6,
-    "status": "scheduled"
-  },
-  {
-    "id": "session-117",
-    "title": "Old Barre Request",
+    "title": "Monday Morning Reformer Flow",
     "discipline_id": "disc-barre",
-    "disciplineId": "disc-barre",
-    "trainer_id": "trainer-003",
-    "trainerId": "trainer-003",
-    "date": "2026-09-27",
-    "time": "11:37",
-    "start_time": "2026-09-27T06:07:53.319Z",
-    "startsAt": "2026-09-27T06:07:53.319Z",
-    "end_time": "2026-09-27T07:07:53.319Z",
-    "durationMinutes": 60,
-    "capacity": 6,
-    "spotsRemaining": 6,
-    "spotsLeft": 6,
-    "status": "scheduled"
-  },
-  {
-    "id": "session-135",
-    "title": "Barre Direct Test",
-    "discipline_id": "disc-002",
-    "disciplineId": "disc-002",
-    "trainer_id": "trainer-004",
-    "trainerId": "trainer-004",
-    "date": "2026-09-24",
-    "time": "07:37",
-    "start_time": "2026-09-24T02:07:53.564Z",
-    "startsAt": "2026-09-24T02:07:53.564Z",
-    "end_time": "2026-09-24T03:07:53.564Z",
-    "durationMinutes": 60,
-    "capacity": 6,
-    "spotsRemaining": 6,
-    "spotsLeft": 6,
-    "status": "scheduled"
-  },
-  {
-    "id": "session-144",
-    "title": "No-Show Attendance Policy Test",
-    "discipline_id": "disc-001",
-    "disciplineId": "disc-001",
     "trainer_id": "trainer-001",
-    "trainerId": "trainer-001",
-    "date": "2026-09-24",
-    "time": "07:37",
-    "start_time": "2026-09-24T02:07:53.568Z",
-    "startsAt": "2026-09-24T02:07:53.568Z",
-    "end_time": "2026-09-24T03:07:53.568Z",
-    "durationMinutes": 60,
+    "start_time": "2026-10-11T03:30:00+00:00",
+    "end_time": "2026-10-11T04:30:00+00:00",
     "capacity": 6,
+    "status": "scheduled",
+    "notes": null,
+    "created_at": "2026-09-26T03:52:24.239388+00:00",
+    "trainer": null,
+    "discipline": {
+      "id": "disc-barre",
+      "name": "Barre Conditioning",
+      "created_at": "2026-09-17T20:57:47.58386+00:00",
+      "description": "Ballet-inspired low-impact workout blending isometric holds, small pulses, and stretching. Delivered by Physicq 57 on weekends."
+    },
+    "bookings": [
+      {
+        "count": 0
+      }
+    ],
+    "date": "2026-10-11",
+    "time": "09:00",
+    "startsAt": "2026-10-11T03:30:00+00:00",
+    "disciplineId": "disc-barre",
+    "trainerId": "trainer-001",
     "spotsRemaining": 6,
-    "spotsLeft": 6,
-    "status": "scheduled"
+    "durationMinutes": 60
+  },
+  {
+    "id": "session-104",
+    "title": "Monday Morning Reformer Flow",
+    "discipline_id": "disc-barre",
+    "trainer_id": "trainer-001",
+    "start_time": "2026-10-12T03:30:00+00:00",
+    "end_time": "2026-10-12T04:30:00+00:00",
+    "capacity": 6,
+    "status": "scheduled",
+    "notes": null,
+    "created_at": "2026-09-26T03:52:24.239388+00:00",
+    "trainer": null,
+    "discipline": {
+      "id": "disc-barre",
+      "name": "Barre Conditioning",
+      "created_at": "2026-09-17T20:57:47.58386+00:00",
+      "description": "Ballet-inspired low-impact workout blending isometric holds, small pulses, and stretching. Delivered by Physicq 57 on weekends."
+    },
+    "bookings": [
+      {
+        "count": 0
+      }
+    ],
+    "date": "2026-10-12",
+    "time": "09:00",
+    "startsAt": "2026-10-12T03:30:00+00:00",
+    "disciplineId": "disc-barre",
+    "trainerId": "trainer-001",
+    "spotsRemaining": 6,
+    "durationMinutes": 60
+  },
+  {
+    "id": "session-109",
+    "title": "Monday Morning Reformer Flow",
+    "discipline_id": "disc-barre",
+    "trainer_id": "trainer-001",
+    "start_time": "2026-10-18T03:30:00+00:00",
+    "end_time": "2026-10-18T04:30:00+00:00",
+    "capacity": 6,
+    "status": "scheduled",
+    "notes": null,
+    "created_at": "2026-09-26T03:52:24.239388+00:00",
+    "trainer": null,
+    "discipline": {
+      "id": "disc-barre",
+      "name": "Barre Conditioning",
+      "created_at": "2026-09-17T20:57:47.58386+00:00",
+      "description": "Ballet-inspired low-impact workout blending isometric holds, small pulses, and stretching. Delivered by Physicq 57 on weekends."
+    },
+    "bookings": [
+      {
+        "count": 0
+      }
+    ],
+    "date": "2026-10-18",
+    "time": "09:00",
+    "startsAt": "2026-10-18T03:30:00+00:00",
+    "disciplineId": "disc-barre",
+    "trainerId": "trainer-001",
+    "spotsRemaining": 6,
+    "durationMinutes": 60
+  },
+  {
+    "id": "session-105",
+    "title": "Monday Morning Reformer Flow",
+    "discipline_id": "disc-barre",
+    "trainer_id": "trainer-001",
+    "start_time": "2026-10-19T03:30:00+00:00",
+    "end_time": "2026-10-19T04:30:00+00:00",
+    "capacity": 6,
+    "status": "scheduled",
+    "notes": null,
+    "created_at": "2026-09-26T03:52:24.239388+00:00",
+    "trainer": null,
+    "discipline": {
+      "id": "disc-barre",
+      "name": "Barre Conditioning",
+      "created_at": "2026-09-17T20:57:47.58386+00:00",
+      "description": "Ballet-inspired low-impact workout blending isometric holds, small pulses, and stretching. Delivered by Physicq 57 on weekends."
+    },
+    "bookings": [
+      {
+        "count": 0
+      }
+    ],
+    "date": "2026-10-19",
+    "time": "09:00",
+    "startsAt": "2026-10-19T03:30:00+00:00",
+    "disciplineId": "disc-barre",
+    "trainerId": "trainer-001",
+    "spotsRemaining": 6,
+    "durationMinutes": 60
   }
 ]

@@ -39,15 +39,17 @@ function stepDate(currentDateStr, dayOffset) {
   return toISODate(d);
 }
 
-export async function render(container) {
+export async function render(container, shouldSync = true) {
   const currentSeq = ++renderSeq;
 
-  try {
-    await Promise.all([
-      store.syncBookings().catch(() => {}),
-      store.syncClassSessions().catch(() => {})
-    ]);
-  } catch (_) {}
+  if (shouldSync) {
+    try {
+      await Promise.all([
+        store.syncBookings().catch(() => {}),
+        store.syncClassSessions().catch(() => {})
+      ]);
+    } catch (_) {}
+  }
 
   // Guard against race conditions from overlapping async calls
   if (currentSeq !== renderSeq) return;
@@ -103,12 +105,12 @@ export async function render(container) {
 
   calendarTabBtn.addEventListener('click', () => {
     currentTab = 'calendar';
-    render(container);
+    render(container, false);
   });
 
   ledgerTabBtn.addEventListener('click', () => {
     currentTab = 'ledger';
-    render(container);
+    render(container, false);
   });
 
   tabSwitcher.append(calendarTabBtn, ledgerTabBtn);
@@ -132,11 +134,15 @@ export async function render(container) {
   // Reactive auto-updates on bookings or remote data sync
   if (!isEventsSubscribed) {
     isEventsSubscribed = true;
+    let debounceTimer = null;
     const onBookingMutated = () => {
-      const activeContainer = document.querySelector('#app-content') || document.querySelector('.main-content');
-      if (activeContainer && window.location.hash.startsWith('#/admin/bookings')) {
-        render(activeContainer);
-      }
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        const activeContainer = document.querySelector('#app-content') || document.querySelector('.main-content');
+        if (activeContainer && window.location.hash.startsWith('#/admin/bookings')) {
+          render(activeContainer, false);
+        }
+      }, 150);
     };
     events.on(EVENT.BOOKING_CREATED, onBookingMutated);
     events.on(EVENT.BOOKING_CANCELLED, onBookingMutated);
@@ -172,7 +178,7 @@ function renderCalendarView(headerWrapper, page, container, { todayIST, yesterda
   });
 
   const calendarBox = createElement('div', {
-    style: `display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid ${viewMode === 'date' ? 'var(--rust)' : 'var(--stone-30)'}; border-radius: 6px; padding: 3px 8px;`
+    style: `display: inline-flex; align-items: center; gap: 6px; background: ${viewMode === 'date' ? 'rgba(143, 84, 83, 0.08)' : 'white'}; border: 1.5px solid ${viewMode === 'date' ? 'var(--rust)' : 'var(--stone-30)'}; border-radius: 6px; padding: 3px 8px; cursor: pointer;`
   });
 
   const calIcon = createElement('i', {
@@ -204,26 +210,39 @@ function renderCalendarView(headerWrapper, page, container, { todayIST, yesterda
   });
 
   calendarBox.append(calIcon, dateInput);
+  calendarBox.addEventListener('click', (e) => {
+    if (e.target !== dateInput && typeof dateInput.showPicker === 'function') {
+      try { dateInput.showPicker(); } catch (_) {}
+    }
+  });
+
   leftControls.append(todayTomorrowBtn, yesterdayBtn, calendarBox, prevDayBtn, nextDayBtn);
   toolbar.appendChild(leftControls);
   headerWrapper.appendChild(toolbar);
 
   todayTomorrowBtn.addEventListener('click', () => {
     viewMode = 'today_tomorrow';
-    render(container);
+    render(container, false);
   });
 
   yesterdayBtn.addEventListener('click', () => {
     viewMode = 'date';
     selectedDate = yesterdayIST;
-    render(container);
+    render(container, false);
   });
 
-  dateInput.addEventListener('change', (e) => {
-    if (e.target.value) {
+  const onDatePicked = (val) => {
+    if (val && val !== selectedDate) {
       viewMode = 'date';
-      selectedDate = e.target.value;
-      render(container);
+      selectedDate = val;
+      render(container, false);
+    }
+  };
+
+  dateInput.addEventListener('change', (e) => onDatePicked(e.target.value));
+  dateInput.addEventListener('input', (e) => {
+    if (e.target.value && e.target.value.length === 10) {
+      onDatePicked(e.target.value);
     }
   });
 
@@ -231,14 +250,14 @@ function renderCalendarView(headerWrapper, page, container, { todayIST, yesterda
     const baseDate = viewMode === 'today_tomorrow' ? todayIST : selectedDate;
     selectedDate = stepDate(baseDate, -1);
     viewMode = 'date';
-    render(container);
+    render(container, false);
   });
 
   nextDayBtn.addEventListener('click', () => {
     const baseDate = viewMode === 'today_tomorrow' ? todayIST : selectedDate;
     selectedDate = stepDate(baseDate, 1);
     viewMode = 'date';
-    render(container);
+    render(container, false);
   });
 
   // Content Area for Batches
@@ -247,7 +266,7 @@ function renderCalendarView(headerWrapper, page, container, { todayIST, yesterda
   });
   page.appendChild(contentArea);
 
-  const allBatches = store.getTrainerBatchEnrollments();
+  let allBatches = store.getTrainerBatchEnrollments();
 
   if (viewMode === 'today_tomorrow') {
     const todayBatches = allBatches.filter(b => b.date === todayIST);
@@ -257,8 +276,8 @@ function renderCalendarView(headerWrapper, page, container, { todayIST, yesterda
       style: 'flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; overflow: hidden;'
     });
 
-    colsGrid.appendChild(buildDayBatchColumn("Today's Batches", todayIST, todayBatches, 'TODAY', () => render(container)));
-    colsGrid.appendChild(buildDayBatchColumn("Tomorrow's Batches", tomorrowIST, tomorrowBatches, 'TOMORROW', () => render(container)));
+    colsGrid.appendChild(buildDayBatchColumn("Today's Batches", todayIST, todayBatches, 'TODAY', () => render(container, false)));
+    colsGrid.appendChild(buildDayBatchColumn("Tomorrow's Batches", tomorrowIST, tomorrowBatches, 'TOMORROW', () => render(container, false)));
     contentArea.appendChild(colsGrid);
   } else {
     // Single Selected Date Mode

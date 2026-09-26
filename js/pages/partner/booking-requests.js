@@ -13,6 +13,7 @@ import { createEmptyState } from '../../components/empty-state.js';
 import { openModal } from '../../components/modal.js';
 import { showToast } from '../../components/toast.js';
 import { openForgotPasswordModal } from '../../components/forgot-password-modal.js';
+import * as auth from '../../core/auth.js';
 
 export async function render(container) {
   clearChildren(container);
@@ -40,7 +41,8 @@ export async function render(container) {
   });
   resetPassBtn.prepend(createElement('i', { attributes: { 'data-lucide': 'key-round' }, style: 'width: 14px; height: 14px; margin-right: 6px;' }));
   resetPassBtn.addEventListener('click', () => {
-    openForgotPasswordModal('ananya.deshmukh@physicq57.com');
+    const user = auth.getCurrentUser();
+    openForgotPasswordModal(user ? user.email : '');
   });
 
   btnRow.appendChild(resetPassBtn);

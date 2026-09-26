@@ -215,6 +215,157 @@ export function buildInvoiceHTML(payment) {
 }
 
 /**
+ * Download official Tax Invoice document directly as a 1-page A4 PDF using html2canvas & jsPDF.
+ * @param {Object} payment
+ */
+export async function downloadReceipt(payment) {
+  if (!payment) return;
+  const invoiceNo = payment.invoiceNo || payment.invoice_no || `INV-${Date.now()}`;
+
+  let tempContainer = null;
+  try {
+    showToast('Generating official Tax Invoice PDF...', 'info');
+
+    // 1. Locate existing rendered invoice or mount off-screen
+    let targetEl = document.getElementById(`invoice-doc-${payment.id}`);
+    if (!targetEl) {
+      tempContainer = document.createElement('div');
+      tempContainer.id = `temp-pdf-render-${Date.now()}`;
+      tempContainer.style.position = 'fixed';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '820px';
+      tempContainer.style.background = '#ffffff';
+      tempContainer.style.zIndex = '-99999';
+      tempContainer.innerHTML = buildInvoiceHTML(payment);
+      document.body.appendChild(tempContainer);
+      targetEl = tempContainer.querySelector('.luxury-invoice-paper') || tempContainer;
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons({ root: tempContainer });
+      }
+    }
+
+    // 2. Wait for all images inside invoice to complete loading
+    const images = Array.from(targetEl.querySelectorAll('img'));
+    if (images.length > 0) {
+      await Promise.all(images.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(res => {
+          img.onload = res;
+          img.onerror = res;
+        });
+      }));
+    }
+
+    // 3. Render high-res canvas via html2canvas
+    if (typeof window.html2canvas === 'function' && window.jspdf && typeof window.jspdf.jsPDF === 'function') {
+      const canvas = await window.html2canvas(targetEl, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 8;
+      const printableWidth = pageWidth - (margin * 2); // 194mm
+      const printableHeight = pageHeight - (margin * 2); // 281mm
+
+      let imgWidth = printableWidth;
+      let imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      // Lock strictly to 1 A4 page: scale down if height exceeds printable boundary
+      if (imgHeight > printableHeight) {
+        imgHeight = printableHeight;
+        imgWidth = (canvas.width * imgHeight) / canvas.height;
+      }
+
+      const xOffset = margin + (printableWidth - imgWidth) / 2;
+      const yOffset = margin;
+
+      const imgData = canvas.toDataURL('image/png');
+      pdf.addImage(imgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
+      pdf.save(`Invoice-${invoiceNo}.pdf`);
+
+      showToast(`Invoice ${invoiceNo}.pdf downloaded successfully!`, 'success');
+      return;
+    }
+  } catch (err) {
+    console.warn('[PDF Download Generation Error - Falling back]', err);
+  } finally {
+    if (tempContainer && tempContainer.parentNode) {
+      tempContainer.parentNode.removeChild(tempContainer);
+    }
+  }
+
+  // Fallback 1: Hidden clean iframe print with full stylesheets loaded (no about:blank tab left open)
+  try {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Tax Invoice • ${escapeHtml(invoiceNo)}</title>
+  <link rel="stylesheet" href="${window.location.origin}/css/variables.css">
+  <link rel="stylesheet" href="${window.location.origin}/css/base.css">
+  <link rel="stylesheet" href="${window.location.origin}/css/pages/pages.css">
+  <link rel="stylesheet" href="${window.location.origin}/css/components/modals.css">
+  <style>
+    @page { size: A4 portrait; margin: 8mm; }
+    body { background: #fff !important; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .luxury-invoice-paper { box-shadow: none !important; border: 1px solid #e5e7eb !important; margin: 0 auto !important; max-width: 100% !important; padding: 12px 16px !important; }
+  </style>
+</head>
+<body>
+  ${buildInvoiceHTML(payment)}
+</body>
+</html>`);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => {
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      }, 2000);
+    }, 600);
+    return;
+  } catch (printErr) {
+    console.warn('[Iframe Print Warn]', printErr);
+  }
+
+  // Fallback 2: Direct HTML file download
+  const blob = new Blob([buildInvoiceHTML(payment)], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Invoice-${invoiceNo}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`Invoice ${invoiceNo} downloaded.`, 'success');
+}
+
+/**
  * Open the official tax invoice modal with direct email receipt dispatch.
  * @param {Object} payment - Enriched payment object
  */
@@ -236,6 +387,29 @@ export function openReceiptModal(payment) {
   `;
 
   const toolbarActions = createElement('div', { className: 'receipt-toolbar-actions', style: 'display: flex; gap: var(--space-2);' });
+
+  // Download PDF Button
+  const downloadReceiptBtn = createElement('button', {
+    className: 'btn btn-outline btn-sm',
+    attributes: { type: 'button', id: 'btn-download-receipt', title: 'Download Official Tax Invoice PDF' },
+    style: 'display: inline-flex; align-items: center; gap: 6px;',
+    text: 'Download PDF'
+  });
+  downloadReceiptBtn.prepend(createElement('i', { attributes: { 'data-lucide': 'download' }, style: 'width: 14px; height: 14px;' }));
+  downloadReceiptBtn.addEventListener('click', async () => {
+    downloadReceiptBtn.disabled = true;
+    const origHTML = downloadReceiptBtn.innerHTML;
+    downloadReceiptBtn.innerHTML = '<i data-lucide="loader-2" style="width: 14px; height: 14px; animation: spin 1s linear infinite;"></i> Generating...';
+    try {
+      await downloadReceipt(payment);
+    } finally {
+      downloadReceiptBtn.disabled = false;
+      downloadReceiptBtn.innerHTML = origHTML;
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons({ root: downloadReceiptBtn });
+      }
+    }
+  });
 
   // Email Receipt Button (triggers official Tax Invoice dispatch directly to member inbox)
   const emailReceiptBtn = createElement('button', {
@@ -283,7 +457,7 @@ export function openReceiptModal(payment) {
     }
   });
 
-  toolbarActions.append(emailReceiptBtn);
+  toolbarActions.append(downloadReceiptBtn, emailReceiptBtn);
   toolbar.append(toolbarLeft, toolbarActions);
   container.appendChild(toolbar);
 

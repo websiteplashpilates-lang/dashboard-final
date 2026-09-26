@@ -11,6 +11,7 @@ import { createStatCard } from '../../components/stat-card.js';
 import { createChartBar } from '../../components/chart-bar.js';
 import { createBadge } from '../../components/badge.js';
 import { openForgotPasswordModal } from '../../components/forgot-password-modal.js';
+import * as auth from '../../core/auth.js';
 
 export async function render(container) {
   const stats = store.getOverviewStats();
@@ -23,6 +24,7 @@ export async function render(container) {
     className: 'page-header',
     style: 'display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: var(--space-4);'
   });
+
   const titleGroup = createElement('div');
   const title = createElement('h1', { className: 'page-title', text: 'Studio Overview' });
   const subtitle = createElement('p', {
@@ -38,7 +40,8 @@ export async function render(container) {
   });
   resetPassBtn.prepend(createElement('i', { attributes: { 'data-lucide': 'key-round' }, style: 'width: 14px; height: 14px; margin-right: 6px;' }));
   resetPassBtn.addEventListener('click', () => {
-    openForgotPasswordModal('studio.admin@plashpilates.com');
+    const user = auth.getCurrentUser();
+    openForgotPasswordModal(user ? user.email : '');
   });
 
   header.append(titleGroup, resetPassBtn);

@@ -30,6 +30,9 @@ function getKolkataDateString(offsetDays = 0) {
 
 export async function render(container) {
   clearChildren(container);
+  try {
+    await store.syncClassSessions();
+  } catch (_) {}
   const page = createElement('div', { className: 'page-container' });
 
   // Header

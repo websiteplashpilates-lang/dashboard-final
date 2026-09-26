@@ -220,16 +220,24 @@ export async function dbDeletePackage(pkgId) {
 }
 
 
+export function getProxyBaseUrl() {
+  if (typeof window !== 'undefined') return '';
+  if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') return null;
+  return 'http://127.0.0.1:3333';
+}
+
 /**
  * Fetch studio class sessions with live enrollment counts.
  */
 export async function dbGetClassSessions() {
   let serverSessions = [];
   try {
-    const baseUrl = typeof window !== 'undefined' ? '' : 'http://127.0.0.1:3333';
-    const res = await fetch(`${baseUrl}/api/class-sessions`);
-    if (res.ok) {
-      serverSessions = await res.json();
+    const baseUrl = getProxyBaseUrl();
+    if (baseUrl !== null) {
+      const res = await fetch(`${baseUrl}/api/class-sessions`);
+      if (res.ok) {
+        serverSessions = await res.json();
+      }
     }
   } catch (_) {}
   if (!Array.isArray(serverSessions) || serverSessions.length === 0) {
@@ -277,42 +285,50 @@ export async function dbGetClassSessions() {
   });
 
   const data = Array.from(sMap.values());
-  if (data.length === 0) return null;
+  if (data.length === 0) return [];
 
   return data.map(s => {
     const bookedCount = s.bookings?.[0]?.count || 0;
-    const startTime = s.start_time;
-    let date = '';
-    let time = '';
-    let formattedDate = '';
-    let formattedTime = '';
-    if (startTime) {
+    const startTime = s.start_time || s.startsAt || s.startTime || (s.date && s.time ? `${s.date}T${s.time}:00+05:30` : '');
+    let date = s.date || '';
+    let time = s.time || '';
+    let formattedDate = s.formattedDate || '';
+    let formattedTime = s.formattedTime || '';
+    if (startTime && (!date || !time)) {
       const ist = getISTDateParts(startTime);
-      date = ist.date;
-      time = ist.time;
-      formattedDate = ist.formattedDate;
-      formattedTime = ist.formattedTime;
+      date = ist.date || date;
+      time = ist.time || time;
+      formattedDate = ist.formattedDate || formattedDate;
+      formattedTime = ist.formattedTime || formattedTime;
     }
-    const spotsRemaining = Math.max(0, (s.capacity || 6) - bookedCount);
-    let durationMinutes = 60;
+    const cap = s.capacity || 6;
+    const spotsRemaining = s.spotsRemaining !== undefined
+      ? s.spotsRemaining
+      : (s.spotsLeft !== undefined ? s.spotsLeft : Math.max(0, cap - bookedCount));
+    let durationMinutes = s.durationMinutes || 60;
     if (s.start_time && s.end_time) {
-      durationMinutes = Math.round((new Date(s.end_time) - new Date(s.start_time)) / 60000) || 60;
+      durationMinutes = Math.round((new Date(s.end_time) - new Date(s.start_time)) / 60000) || durationMinutes;
     }
+
+    const discId = s.discipline_id || s.disciplineId || 'disc-pilates';
+    const trId = s.trainer_id || s.trainerId || 'trainer-001';
 
     return {
       id: s.id,
-      title: s.title,
-      disciplineId: s.discipline_id,
-      trainerId: s.trainer_id,
-      startTime: s.start_time,
-      startsAt: s.start_time,
-      endTime: s.end_time,
+      title: s.title || 'Studio Session',
+      disciplineId: discId,
+      discipline_id: discId,
+      trainerId: trId,
+      trainer_id: trId,
+      startTime: startTime || s.startTime,
+      startsAt: startTime || s.startsAt,
+      endTime: s.end_time || s.endTime,
       date,
       time,
       formattedDate,
       formattedTime,
       durationMinutes,
-      capacity: s.capacity || 6,
+      capacity: cap,
       bookedCount: Math.min(bookedCount, 6),
       spotsRemaining,
       spotsLeft: spotsRemaining,
@@ -466,7 +482,7 @@ export async function dbPurchasePackage(paymentData, passData, creditsData) {
 /**
  * Atomically create a booking subject to strict 1:6 cap constraint.
  */
-export async function dbCreateBooking({ memberId, sessionId, passId }) {
+export async function dbCreateBooking({ memberId, sessionId, passId, disciplineId }) {
   const client = getSupabase();
   if (!client) return null;
 
@@ -488,7 +504,9 @@ export async function dbCreateBooking({ memberId, sessionId, passId }) {
         .select()
         .single();
 
-      if (!error && data) return data;
+      if (!error && data) {
+        return data;
+      }
       if (error && (error.code === 'P0001' || error.message?.includes('capped at strictly 6'))) {
         throw new Error('This batch has reached its maximum 6-member limit.');
       }
@@ -504,7 +522,7 @@ export async function dbCreateBooking({ memberId, sessionId, passId }) {
     const res = await fetch(`${baseUrl}/api/member/booking-action`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'create', memberId, sessionId, passId, status: 'upcoming' })
+      body: JSON.stringify({ action: 'create', memberId, sessionId, passId, disciplineId, status: 'upcoming' })
     });
     if (res.ok) {
       const json = await res.json();
@@ -532,10 +550,18 @@ export async function dbCreateClassSession(sessionData) {
       const endTime = toISTISOString(new Date(startTime).getTime() + durationMin * 60000);
       const isValidUUID = sessionData.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionData.id);
 
+      const aliasMap = {
+        'disc-001': 'disc-pilates',
+        'disc-002': 'disc-barre',
+        'disc-003': 'disc-sculpt-yoga'
+      };
+      const rawDisc = sessionData.disciplineId || sessionData.discipline_id || 'disc-pilates';
+      const discId = aliasMap[rawDisc] || rawDisc;
+
       const row = {
         ...(isValidUUID ? { id: sessionData.id } : {}),
         title: sessionData.title || 'Studio Class',
-        discipline_id: sessionData.disciplineId,
+        discipline_id: discId,
         trainer_id: sessionData.trainerId || null,
         start_time: startTime,
         end_time: endTime,
@@ -556,15 +582,17 @@ export async function dbCreateClassSession(sessionData) {
   // Authoritative server fallback with Service Role key (bypasses Anon RLS)
   if (!created) {
     try {
-      const baseUrl = typeof window !== 'undefined' ? '' : 'http://127.0.0.1:3333';
-      const res = await fetch(`${baseUrl}/api/admin/class-session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create', session: sessionData })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.session) created = data.session;
+      const baseUrl = getProxyBaseUrl();
+      if (baseUrl !== null) {
+        const res = await fetch(`${baseUrl}/api/admin/class-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', session: sessionData })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.session) created = data.session;
+        }
       }
     } catch (err) {
       console.warn('[dbCreateClassSession server fallback warning]', err.message);
@@ -608,13 +636,15 @@ export async function dbUpdateClassSession(sessionId, data) {
 
   if (!updated) {
     try {
-      const baseUrl = typeof window !== 'undefined' ? '' : 'http://127.0.0.1:3333';
-      const res = await fetch(`${baseUrl}/api/admin/class-session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update', sessionId, patch: data })
-      });
-      if (res.ok) updated = true;
+      const baseUrl = getProxyBaseUrl();
+      if (baseUrl !== null) {
+        const res = await fetch(`${baseUrl}/api/admin/class-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'update', sessionId, patch: data })
+        });
+        if (res.ok) updated = true;
+      }
     } catch (err) {
       console.warn('[dbUpdateClassSession server fallback warning]', err.message);
     }
@@ -639,18 +669,18 @@ export async function dbDeleteClassSession(sessionId) {
     } catch (_) {}
   }
 
-  if (!deleted) {
-    try {
-      const baseUrl = typeof window !== 'undefined' ? '' : 'http://127.0.0.1:3333';
+  try {
+    const baseUrl = getProxyBaseUrl();
+    if (baseUrl !== null) {
       const res = await fetch(`${baseUrl}/api/admin/class-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', sessionId })
       });
       if (res.ok) deleted = true;
-    } catch (err) {
-      console.warn('[dbDeleteClassSession server fallback warning]', err.message);
     }
+  } catch (err) {
+    console.warn('[dbDeleteClassSession server fallback warning]', err.message);
   }
 
   return deleted;
@@ -659,7 +689,7 @@ export async function dbDeleteClassSession(sessionId) {
 /**
  * Cancel a booking in Supabase.
  */
-export async function dbCancelBooking(bookingId) {
+export async function dbCancelBooking(bookingId, options = {}) {
   const client = getSupabase();
   let cancelled = false;
   if (client) {
@@ -668,8 +698,14 @@ export async function dbCancelBooking(bookingId) {
         .from('bookings')
         .update({ status: 'cancelled' })
         .eq('id', bookingId);
-      if (!error) cancelled = true;
-    } catch (_) {}
+      if (!error) return true;
+      if (error && (error.code === 'P0005' || error.message?.includes('Cancellation window closed'))) {
+        throw new Error(error.message || 'Cancellation window closed.');
+      }
+    } catch (clientErr) {
+      if (clientErr.message?.includes('Cancellation window closed')) throw clientErr;
+      console.warn('[dbCancelBooking client notice]', clientErr.message);
+    }
   }
 
   // Authoritative server proxy fallback (uses Service Role to guarantee cancellation in Supabase)
@@ -678,7 +714,12 @@ export async function dbCancelBooking(bookingId) {
     const res = await fetch(`${baseUrl}/api/member/booking-action`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'cancel', bookingId })
+      body: JSON.stringify({
+        action: 'cancel',
+        bookingId,
+        passId: options?.passId,
+        disciplineId: options?.disciplineId
+      })
     });
     if (res.ok) cancelled = true;
   } catch (err) {
@@ -847,10 +888,7 @@ export async function dbSignIn(email, password) {
   const client = getSupabase();
   if (!client) return null;
   const cleanEmail = (email || '').trim().toLowerCase();
-  let res = await client.auth.signInWithPassword({ email: cleanEmail, password });
-  if (res.error && cleanEmail === 'aisha.kapoor@example.com' && password === 'plashMember2026!') {
-    res = await client.auth.signInWithPassword({ email: cleanEmail, password: 'member123' });
-  }
+  const res = await client.auth.signInWithPassword({ email: cleanEmail, password });
   if (res.error) throw res.error;
   return res.data;
 }

@@ -24,27 +24,27 @@
 .form-select,
 .form-textarea {
   width: 100%;
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--text-sm);
-  font-family: var(--font-sans);
-  color: var(--ink);
-  background: white;
-  border: 1px solid var(--ink-20);
-  border-radius: var(--radius-sm);
+  padding: 0.7rem 1rem;
+  font-size: 0.92rem;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--ink, #2B282F);
+  background: #FFFFFF;
+  border: 1px solid rgba(43, 40, 47, 0.16);
+  border-radius: 10px;
   transition: border-color var(--t-fast), box-shadow var(--t-fast);
 }
 
 .form-input:hover,
 .form-select:hover,
 .form-textarea:hover {
-  border-color: var(--ink-50);
+  border-color: rgba(43, 40, 47, 0.35);
 }
 
 .form-input:focus,
 .form-select:focus,
 .form-textarea:focus {
-  border-color: var(--rust);
-  box-shadow: 0 0 0 3px var(--rust-10);
+  border-color: var(--rust, #BE603C);
+  box-shadow: 0 0 0 3px rgba(190, 96, 60, 0.18);
   outline: none;
 }
 

@@ -1,59 +1,95 @@
 /* ============================================================
-   PLASH PILATES — Page-specific: Dashboard
+   PLASH PILATES — Page-specific: Dashboard (Luxury Studio Design)
    ============================================================ */
 .dashboard-welcome {
   margin-bottom: var(--space-8);
 }
 .dashboard-welcome-name {
-  font-family: var(--font-serif);
-  font-size: var(--text-3xl);
-  font-weight: var(--weight-semibold);
-  color: var(--ink);
+  font-family: 'Outfit', sans-serif;
+  font-size: 2.35rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink, #2B282F);
+  line-height: 1.15;
 }
 .dashboard-welcome-sub {
-  font-size: var(--text-base);
-  color: var(--ink-50);
-  margin-top: var(--space-1);
+  font-size: 0.95rem;
+  color: #6E6A5F;
+  margin-top: 0.4rem;
+  font-weight: 500;
 }
 .dashboard-stats { margin-bottom: var(--space-8); }
+
+@media (max-width: 768px) {
+  .dashboard-welcome {
+    margin-bottom: var(--space-4);
+  }
+  .dashboard-welcome-name {
+    font-size: 1.65rem;
+  }
+  .dashboard-welcome-sub {
+    font-size: 0.85rem;
+  }
+  .dashboard-stats {
+    margin-bottom: var(--space-5);
+  }
+  .next-session-card {
+    padding: 1.15rem 1.25rem;
+    gap: 1rem;
+  }
+}
 .dashboard-next-session { margin-bottom: var(--space-8); }
 .next-session-card {
-  background: white;
-  border: 1px solid var(--ink-10);
-  border-radius: var(--radius-sm);
-  padding: var(--space-6);
+  background: #FFFFFF;
+  border: 1px solid rgba(43, 40, 47, 0.12);
+  border-radius: 14px;
+  padding: 1.5rem 1.75rem;
   display: flex;
   align-items: center;
-  gap: var(--space-6);
+  gap: 1.5rem;
+  box-shadow: 0 4px 18px rgba(43, 40, 47, 0.05);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.next-session-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(43, 40, 47, 0.08);
+  border-color: rgba(190, 96, 60, 0.28);
 }
 .next-session-date {
   text-align: center;
-  padding: var(--space-3) var(--space-5);
-  background: var(--rust-10);
-  border-radius: var(--radius-sm);
-  min-width: 72px;
+  padding: 0.85rem 1.15rem;
+  background: #FAF2EE;
+  border: 1px solid rgba(190, 96, 60, 0.18);
+  border-radius: 12px;
+  min-width: 78px;
 }
 .next-session-date-day {
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
-  color: var(--rust);
+  font-family: 'Outfit', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--rust, #BE603C);
   line-height: 1;
 }
 .next-session-date-month {
-  font-size: var(--text-xs);
-  color: var(--rust);
-  font-weight: var(--weight-semibold);
+  font-size: 0.72rem;
+  color: var(--rust, #BE603C);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  margin-top: 3px;
 }
 .next-session-info { flex: 1; }
 .next-session-title {
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  color: var(--ink);
-  margin-bottom: var(--space-1);
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink, #2B282F);
+  margin-bottom: 0.35rem;
 }
 .next-session-meta {
-  font-size: var(--text-sm);
-  color: var(--ink-50);
+  font-size: 0.9rem;
+  color: #6E6A5F;
+  font-weight: 500;
 }
 
 /* ---- Booking page ---- */
@@ -189,71 +225,77 @@
 }
 
 /* ============================================================
-   PLASH PILATES — Page-specific: Cart
+   PLASH PILATES — Page-specific: Cart (Luxury Studio Design)
    ============================================================ */
 .cart-grid {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
-  gap: var(--space-8);
+  gap: 2rem;
   align-items: flex-start;
 }
 
 .cart-item-card {
-  background: white;
-  border: 1px solid var(--ink-10);
-  border-radius: var(--radius-sm);
-  padding: var(--space-6);
+  background: #FFFFFF;
+  border: 1px solid rgba(43, 40, 47, 0.12);
+  border-radius: 14px;
+  padding: 1.75rem;
   position: relative;
+  box-shadow: 0 4px 18px rgba(43, 40, 47, 0.05);
 }
 
 .cart-item-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: var(--space-4);
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--ink-10);
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(43, 40, 47, 0.08);
 }
 
 .cart-summary-card {
-  background: white;
-  border: 1px solid var(--ink-10);
-  border-radius: var(--radius-sm);
-  padding: var(--space-6);
+  background: #FFFFFF;
+  border: 1px solid rgba(43, 40, 47, 0.12);
+  border-radius: 14px;
+  padding: 1.75rem;
+  box-shadow: 0 4px 18px rgba(43, 40, 47, 0.05);
 }
 
 .cart-summary-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: var(--text-sm);
-  color: var(--ink-80);
-  margin-bottom: var(--space-3);
+  font-size: 0.92rem;
+  color: #565243;
+  margin-bottom: 0.85rem;
+  font-weight: 500;
 }
 
 .cart-summary-total {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: var(--text-xl);
-  font-family: var(--font-serif);
-  font-weight: var(--weight-bold);
-  color: var(--ink);
-  padding-top: var(--space-4);
-  margin-top: var(--space-4);
-  border-top: 1px solid var(--ink-10);
+  font-size: 1.45rem;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink, #2B282F);
+  padding-top: 1.25rem;
+  margin-top: 1.25rem;
+  border-top: 1px solid rgba(43, 40, 47, 0.1);
 }
 
 .cart-waiver-gate {
-  background: var(--stone);
-  border-radius: var(--radius-sm);
-  padding: var(--space-4);
-  margin: var(--space-5) 0;
+  background: #FAF8F5;
+  border: 1px solid rgba(43, 40, 47, 0.1);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin: 1.5rem 0;
 }
 
 @media (max-width: 900px) {
   .cart-grid {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
   }
 }
 
@@ -789,13 +831,13 @@ body.auth-layout .main-content {
   max-width: 960px;
   min-height: 590px;
   background: #ffffff;
-  border: 1px solid var(--beige);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 25px 50px -12px rgba(43, 40, 47, 0.12), 0 0 1px 1px rgba(43, 40, 47, 0.05);
+  border: 1px solid rgba(43, 40, 47, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px -10px rgba(43, 40, 47, 0.1), 0 0 1px 1px rgba(43, 40, 47, 0.05);
   display: flex;
   overflow: hidden;
   margin: auto;
-  font-family: "Nunito Sans", sans-serif;
+  font-family: 'Outfit', sans-serif;
 }
 
 .auth-card-media {
@@ -830,8 +872,6 @@ body.auth-layout .main-content {
   pointer-events: auto;
 }
 
-
-
 /* Right Form Column */
 .auth-card-form {
   flex: 1.18;
@@ -840,83 +880,82 @@ body.auth-layout .main-content {
   flex-direction: column;
   justify-content: center;
   background: #ffffff;
-  font-family: "Nunito Sans", sans-serif;
 }
 
 .auth-portal-badge {
-  font-family: "Nunito Sans", sans-serif;
-  font-size: 11px;
-  letter-spacing: 1.5px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   font-weight: 700;
-  color: var(--rust);
+  color: var(--rust, #BE603C);
   margin-bottom: 6px;
 }
 
 .auth-form-title {
-  font-family: "Nunito Sans", sans-serif;
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--ink);
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink, #2B282F);
   margin: 0 0 6px 0;
-  line-height: 1.25;
+  line-height: 1.2;
 }
 
 .auth-form-sub {
-  font-family: "Nunito Sans", sans-serif;
-  font-size: 13.5px;
-  color: var(--taupe);
+  font-size: 0.95rem;
+  color: #6E6A5F;
   margin: 0 0 22px 0;
-  line-height: 1.4;
+  line-height: 1.5;
+  font-weight: 500;
 }
 
 .auth-demo-section {
   margin-top: var(--space-5);
-  padding: 12px 14px;
-  background: var(--cream);
-  border: 1px solid var(--beige);
-  border-radius: var(--radius-md);
-  font-family: "Nunito Sans", sans-serif;
+  padding: 14px 16px;
+  background: #FAF8F5;
+  border: 1px solid rgba(43, 40, 47, 0.12);
+  border-radius: 12px;
 }
 
 .auth-demo-title {
-  font-family: "Nunito Sans", sans-serif;
-  font-size: 10.5px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.72rem;
   font-weight: 700;
-  color: var(--ink-70);
+  color: var(--rust, #BE603C);
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.12em;
   margin-bottom: 8px;
   text-align: center;
 }
 
 .auth-demo-btn {
   background: #ffffff;
-  border: 1px solid var(--beige);
-  color: var(--ink);
-  font-family: "Nunito Sans", sans-serif;
-  font-size: 11px;
-  padding: 7px 4px;
+  border: 1px solid rgba(43, 40, 47, 0.14);
+  color: var(--ink, #2B282F);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.75rem;
+  padding: 8px 6px;
   text-align: center;
   justify-content: center;
   font-weight: 600;
-  border-radius: var(--radius-sm);
-  transition: all var(--t-fast);
+  border-radius: 8px;
+  transition: all 0.2s ease;
 }
 
 .auth-demo-btn:hover {
-  border-color: var(--rust);
-  color: var(--rust);
+  border-color: var(--rust, #BE603C);
+  color: var(--rust, #BE603C);
+  background: #FAF2EE;
 }
 
 .auth-form-footer {
   text-align: center;
   margin-top: var(--space-5);
   padding-top: var(--space-4);
-  border-top: 1px solid var(--beige);
-  font-size: 13px;
-  color: var(--ink-70);
-  font-family: "Nunito Sans", sans-serif;
+  border-top: 1px solid rgba(43, 40, 47, 0.08);
+  font-size: 0.88rem;
+  color: #6E6A5F;
 }
 
 @media (max-width: 768px) {
@@ -1066,3 +1105,4 @@ body.auth-layout .main-content {
   outline: 2px solid var(--rust);
   outline-offset: 2px;
 }
+
