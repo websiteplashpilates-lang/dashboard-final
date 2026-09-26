@@ -3288,35 +3288,40 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
     });
   };
 
-  // Primary Server (Port 3333 ONLY)
-  const server3333 = http.createServer(requestHandler);
-  server3333.listen(3333, () => {
-    console.log(`====================================================`);
-    console.log(`  PLASH PILATES SERVER STARTED ON PORT 3333`);
-    console.log(`  Razorpay Live Key: ${RAZORPAY_KEY_ID}`);
-    console.log(`  http://localhost:3333/ and http://127.0.0.1:3333/`);
-    console.log(`====================================================`);
+  // Primary Server (Port 3333 ONLY - when running standalone)
+  if (!process.env.VERCEL) {
+    const server3333 = http.createServer(requestHandler);
+    server3333.listen(3333, () => {
+      console.log(`====================================================`);
+      console.log(`  PLASH PILATES SERVER STARTED ON PORT 3333`);
+      console.log(`  Razorpay Live Key: ${RAZORPAY_KEY_ID}`);
+      console.log(`  http://localhost:3333/ and http://127.0.0.1:3333/`);
+      console.log(`====================================================`);
 
-    // Automatic Full Payment Sync on startup
-    syncAllRazorpayPaymentsToSupabase(100).then(res => {
-      console.log(`[Startup Payment Sync Result]`, res);
-    }).catch(err => {
-      console.warn('[Startup Payment Sync Warning]', err.message);
+      // Automatic Full Payment Sync on startup
+      syncAllRazorpayPaymentsToSupabase(100).then(res => {
+        console.log(`[Startup Payment Sync Result]`, res);
+      }).catch(err => {
+        console.warn('[Startup Payment Sync Warning]', err.message);
+      });
+
+      // Periodic Payment Sync every 2 minutes
+      setInterval(() => {
+        syncAllRazorpayPaymentsToSupabase(50).catch(() => {});
+      }, 120000);
+
+      // Dual listener on port 3000 (catches Supabase Auth email redirect links)
+      try {
+        const server3000 = http.createServer(requestHandler);
+        server3000.on('error', (err) => {
+          console.log('[Notice: Port 3000 redirect listener skipped]', err.message);
+        });
+        server3000.listen(3000, () => {
+          console.log(`  Supabase Auth Redirect Listener active on http://localhost:3000/`);
+        });
+      } catch (_) {}
     });
+  }
 
-    // Periodic Payment Sync every 2 minutes
-    setInterval(() => {
-      syncAllRazorpayPaymentsToSupabase(50).catch(() => {});
-    }, 120000);
-
-    // Dual listener on port 3000 (catches Supabase Auth email redirect links)
-    try {
-      const server3000 = http.createServer(requestHandler);
-      server3000.on('error', (err) => {
-        console.log('[Notice: Port 3000 redirect listener skipped]', err.message);
-      });
-      server3000.listen(3000, () => {
-        console.log(`  Supabase Auth Redirect Listener active on http://localhost:3000/`);
-      });
-    } catch (_) {}
-  });
+  // Export requestHandler for Vercel Serverless Function deployment
+  module.exports = requestHandler;
