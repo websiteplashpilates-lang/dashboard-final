@@ -4,15 +4,15 @@
  * @module app
  */
 
-import * as router from './core/router.js?v=106';
-import * as auth from './core/auth.js?v=106';
-import * as store from './core/store.js?v=118';
+import * as router from './core/router.js';
+import * as auth from './core/auth.js';
+import * as store from './core/store.js';
 import { loadEnvConfig } from './core/env-loader.js';
 import { events, EVENT } from './core/events.js';
 import { setupSkipNav } from './utils/accessibility.js';
-import { renderSidebar } from './components/sidebar.js?v=106';
+import { renderSidebar } from './components/sidebar.js';
 import { initCookieBanner } from './components/cookie-banner.js';
-import { setupRealtimeSubscriptions, getSupabase } from './core/supabase.js?v=118';
+import { setupRealtimeSubscriptions, getSupabase } from './core/supabase.js';
 import './components/toast.js'; // Registers toast event listeners
 
 // Page imports — Authentication & Onboarding
@@ -212,7 +212,8 @@ async function initApp() {
     await store.syncFromSupabase().catch(() => {});
     const currentUser = auth.getCurrentUser();
     if (currentUser && currentUser.email && auth.getCurrentRole() === 'member') {
-      const liveMember = store.getMembers().find(m => (m.email || '').toLowerCase() === currentUser.email.toLowerCase());
+      const allMems = typeof store.getAllMembers === 'function' ? store.getAllMembers() : (typeof store.getMembers === 'function' ? store.getMembers() : []);
+      const liveMember = allMems.find(m => (m.email || '').toLowerCase() === currentUser.email.toLowerCase());
       if (liveMember && liveMember.id && liveMember.id !== auth.getCurrentMemberId()) {
         auth.syncMemberId(liveMember.id);
       }
@@ -238,9 +239,9 @@ async function initApp() {
   // Listen to member persona changes
   events.on(EVENT.AUTH_MEMBER_CHANGED, () => {
     if (sidebarEl) renderSidebar(sidebarEl);
-    // Re-render current page
+    // Re-render current page (only if already on an internal page)
     const curHash = window.location.hash;
-    if (curHash) {
+    if (curHash && !curHash.startsWith('#/login') && !curHash.startsWith('#/signup') && !curHash.startsWith('#/reset-password')) {
       window.dispatchEvent(new HashChangeEvent('hashchange'));
     }
   });

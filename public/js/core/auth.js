@@ -155,6 +155,14 @@ export function _setLastActivityTimeForTesting(timestamp) {
 
 /** @returns {boolean} Whether a user session is active */
 export function isAuthenticated() {
+  if (!authState.isAuthenticated) {
+    try {
+      const fresh = loadSession();
+      if (fresh && fresh.isAuthenticated) {
+        Object.assign(authState, fresh);
+      }
+    } catch (_) {}
+  }
   if (!authState.isAuthenticated) return false;
   if (authState.lastActivityTime && (Date.now() - authState.lastActivityTime > INACTIVITY_TIMEOUT_MS)) {
     logout('timeout');

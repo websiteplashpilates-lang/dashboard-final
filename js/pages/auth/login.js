@@ -6,6 +6,7 @@
 
 import { createElement, clearChildren } from '../../utils/dom.js';
 import * as auth from '../../core/auth.js';
+import * as store from '../../core/store.js';
 import { openForgotPasswordModal } from '../../components/forgot-password-modal.js';
 import { openModal, closeModal } from '../../components/modal.js';
 import { showToast } from '../../components/toast.js';
