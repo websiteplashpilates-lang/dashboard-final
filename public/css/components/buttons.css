@@ -1,0 +1,154 @@
+/* ============================================================
+   PLASH PILATES — Buttons (Luxury Studio Aesthetic)
+   Primary, secondary, ghost, destructive variants.
+   ============================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 0.65rem 1.4rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.2;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  text-decoration: none;
+  user-select: none;
+}
+
+.btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(190, 96, 60, 0.3);
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Primary — rust bg with warm glow */
+.btn-primary {
+  background: var(--rust, #BE603C);
+  color: #FFFFFF;
+  border-color: var(--rust, #BE603C);
+  box-shadow: 0 2px 8px rgba(190, 96, 60, 0.25);
+}
+.btn-primary:hover {
+  background: #A95030;
+  border-color: #A95030;
+  box-shadow: 0 4px 14px rgba(190, 96, 60, 0.35);
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Secondary — warm white luxury style */
+.btn-secondary {
+  background: #FFFFFF;
+  color: var(--ink, #2B282F);
+  border: 1px solid rgba(43, 40, 47, 0.16);
+  box-shadow: 0 1px 3px rgba(43, 40, 47, 0.04);
+}
+.btn-secondary:hover {
+  background: #FDFBF7;
+  color: var(--ink, #2B282F);
+  border-color: rgba(43, 40, 47, 0.35);
+  box-shadow: 0 3px 8px rgba(43, 40, 47, 0.08);
+  transform: translateY(-1px);
+}
+.btn-secondary:active {
+  background: var(--ivory);
+  transform: translateY(0) scale(0.98);
+}
+
+.btn svg,
+.btn [data-lucide] {
+  stroke: currentColor;
+  flex-shrink: 0;
+}
+
+/* Outline */
+.btn-outline {
+  background: transparent;
+  color: var(--ink, #2B282F);
+  border: 1px solid rgba(43, 40, 47, 0.2);
+}
+.btn-outline:hover {
+  background: #FDFBF7;
+  color: var(--rust, #BE603C);
+  border-color: var(--rust, #BE603C);
+  transform: translateY(-1px);
+}
+
+/* Ghost — no border */
+.btn-ghost {
+  background: transparent;
+  color: var(--ink, #2B282F);
+  border-color: transparent;
+}
+.btn-ghost:hover {
+  background: rgba(43, 40, 47, 0.05);
+  color: var(--rust, #BE603C);
+}
+  background: var(--ink-05);
+}
+
+/* Destructive — rose */
+.btn-destructive {
+  background: var(--rose);
+  color: var(--ivory);
+  border-color: var(--rose);
+}
+.btn-destructive:hover {
+  background: #a04f3d;
+  border-color: #a04f3d;
+}
+
+/* Success — moss */
+.btn-success {
+  background: var(--moss);
+  color: var(--ivory);
+  border-color: var(--moss);
+}
+.btn-success:hover {
+  background: #474335;
+}
+
+/* Sizes */
+.btn-sm {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-xs);
+}
+
+.btn-lg {
+  padding: var(--space-4) var(--space-8);
+  font-size: var(--text-base);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* Icon-only button */
+.btn-icon {
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.btn-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Button group */
+.btn-group {
+  display: flex;
+  gap: var(--space-2);
+}

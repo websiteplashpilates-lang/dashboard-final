@@ -1,0 +1,21 @@
+{
+  "name": "Plash Pilates Studio",
+  "short_name": "Plash Pilates",
+  "description": "Boutique Reformer, Sculpt Yoga & Barre Studio in Sadashiva Nagar, Bengaluru",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#934b2d",
+  "icons": [
+    {
+      "src": "assets/images/plash-logo-horizontal.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/images/plash-logo-horizontal.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

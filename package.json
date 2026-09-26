@@ -5,6 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "node scripts/sync-public.cjs",
     "start": "node server.cjs",
     "dev": "node server.cjs",
     "test": "node --check js/app.js && node --check js/core/config.js && node --check js/core/auth.js && node --check js/core/router.js && node --check js/core/store.js && node --check js/core/supabase.js && node --check js/pages/admin/prospects.js && node --check js/pages/admin/activity-logs.js && node --check js/pages/admin/payments.js && node --check js/pages/auth/login.js && node --check js/pages/portal/cart.js && node --check js/pages/error/not-found.js && node --check js/pages/error/forbidden.js && node --check js/pages/error/server-error.js && node --check js/components/receipt-modal.js && node tests/qa-test-suite.js"

@@ -1,0 +1,199 @@
+/* ============================================================
+   PLASH PILATES — Tables
+   Data tables with search, sort, responsive behavior.
+   ============================================================ */
+
+.data-table-wrapper {
+  background: white;
+  border: 1px solid rgba(43, 40, 47, 0.12);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(43, 40, 47, 0.04);
+}
+
+.data-table-scroll {
+  overflow-x: auto;
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+.data-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 1.15rem 1.4rem;
+  border-bottom: 1px solid rgba(43, 40, 47, 0.08);
+  flex-wrap: wrap;
+}
+
+.data-table-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: #FAF8F5;
+  border: 1px solid rgba(43, 40, 47, 0.14);
+  border-radius: 10px;
+  padding: 0.55rem 0.85rem;
+  min-width: 240px;
+  transition: all 0.2s ease;
+}
+
+.data-table-search:focus-within {
+  border-color: var(--rust, #BE603C);
+  box-shadow: 0 0 0 3px rgba(190, 96, 60, 0.15);
+  background: #FFFFFF;
+}
+
+.data-table-search-icon {
+  width: 16px;
+  height: 16px;
+  color: #6E6A5F;
+  flex-shrink: 0;
+}
+
+.data-table-search input {
+  border: none;
+  background: none;
+  width: 100%;
+  font-size: var(--text-sm);
+  color: var(--ink, #2B282F);
+  outline: none;
+}
+.data-table-search input::placeholder {
+  color: #8C887B;
+}
+
+.data-table-filters {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.data-table-filter-select {
+  padding: 0.55rem 0.85rem;
+  font-size: var(--text-sm);
+  border: 1px solid rgba(43, 40, 47, 0.14);
+  border-radius: 10px;
+  background: white;
+  color: var(--ink, #2B282F);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%232B282F' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: var(--space-8);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.data-table-filter-select:focus {
+  border-color: var(--rust, #BE603C);
+  box-shadow: 0 0 0 3px rgba(190, 96, 60, 0.15);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead {
+  background: #FAF8F5;
+  border-bottom: 1px solid rgba(43, 40, 47, 0.1);
+}
+
+.data-table th {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--rust, #BE603C);
+  text-align: left;
+  padding: 0.85rem 1.25rem;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.data-table th.sortable {
+  cursor: pointer;
+}
+.data-table th.sortable:hover {
+  color: var(--ink);
+}
+
+.data-table th .sort-icon {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: var(--space-1);
+  vertical-align: middle;
+  opacity: 0.4;
+}
+.data-table th.sorted .sort-icon {
+  opacity: 1;
+  color: var(--rust);
+}
+
+.data-table td {
+  font-size: var(--text-sm);
+  color: var(--ink);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--ink-05);
+  vertical-align: middle;
+}
+
+.data-table tbody tr {
+  transition: background var(--t-fast);
+}
+.data-table tbody tr:hover {
+  background: var(--ink-05);
+}
+
+.data-table tbody tr.clickable {
+  cursor: pointer;
+}
+
+.data-table-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.data-table-empty {
+  text-align: center;
+  padding: var(--space-12) var(--space-8);
+  color: var(--ink-50);
+  font-size: var(--text-sm);
+}
+
+.data-table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--ink-10);
+  font-size: var(--text-sm);
+  color: var(--ink-50);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .data-table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .data-table-search {
+    min-width: unset;
+  }
+
+  .data-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table {
+    min-width: 600px;
+  }
+}

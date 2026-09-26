@@ -1,0 +1,22 @@
+/* ============================================================
+   PLASH PILATES — Skeleton Loaders
+   ============================================================ */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--ink-05) 25%, var(--ink-10) 50%, var(--ink-05) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+.skeleton-text      { height: 14px; margin-bottom: var(--space-2); }
+.skeleton-text-sm   { height: 12px; width: 60%; margin-bottom: var(--space-2); }
+.skeleton-text-lg   { height: 20px; width: 40%; margin-bottom: var(--space-3); }
+.skeleton-heading   { height: 28px; width: 50%; margin-bottom: var(--space-4); }
+.skeleton-card      { height: 180px; }
+.skeleton-stat      { height: 100px; }
+.skeleton-avatar    { width: 40px; height: 40px; border-radius: 50%; }
+.skeleton-table-row { height: 48px; margin-bottom: var(--space-1); }
+.skeleton-bar       { height: 6px; border-radius: 3px; }
