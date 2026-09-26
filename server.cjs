@@ -962,6 +962,8 @@ async function fulfillVerifiedPayment({ razorpay_order_id, razorpay_payment_id, 
 }
 
 // 6.1 Transactional Email Dispatcher for GST Tax Invoice Receipts
+const EMBEDDED_INVOICE_HTML = require('./email-templates/invoice-html-string.cjs');
+
 async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEmail }) {
   const invoiceNo = payment.invoice_no || payment.invoiceNo || `INV-${Date.now()}`;
   const memberEmail = (overrideEmail || member.email || '').trim().toLowerCase();
@@ -978,6 +980,8 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
   let html = '';
   if (fs.existsSync(templatePath)) {
     html = fs.readFileSync(templatePath, 'utf8');
+  } else if (typeof EMBEDDED_INVOICE_HTML === 'string' && EMBEDDED_INVOICE_HTML) {
+    html = EMBEDDED_INVOICE_HTML;
   } else {
     console.warn('[Receipt Mail Engine] Template not found at', templatePath);
     return { success: false, error: 'Email template not found' };
