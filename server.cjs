@@ -1109,6 +1109,21 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
   };
 }
 
+let EMBEDDED_INDEX_HTML = null;
+try {
+  const possiblePaths = [
+    path.join(__dirname, 'index.html'),
+    path.join(process.cwd(), 'index.html'),
+    path.join(__dirname, '..', 'index.html')
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      EMBEDDED_INDEX_HTML = fs.readFileSync(p, 'utf8');
+      break;
+    }
+  }
+} catch (_) {}
+
 // 7. HTTP Server
   const requestHandler = async (req, res) => {
     console.log(`[REQ :${req.socket?.localPort}] ${req.method} ${req.url}`);
@@ -3290,6 +3305,10 @@ async function sendPaymentReceiptEmail({ payment, pass, member, pkg, overrideEma
                 return res.end(content);
               }
             } catch (_) {}
+          }
+          if (EMBEDDED_INDEX_HTML) {
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            return res.end(EMBEDDED_INDEX_HTML);
           }
         }
         res.writeHead(404, { 'Content-Type': 'text/plain' });

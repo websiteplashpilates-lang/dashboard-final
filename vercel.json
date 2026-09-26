@@ -1,7 +1,15 @@
 {
   "functions": {
     "api/server.js": {
-      "includeFiles": "{index.html,site.webmanifest,css/**,js/**,assets/**,data/**,email-templates/**}"
+      "includeFiles": [
+        "index.html",
+        "site.webmanifest",
+        "css/**",
+        "js/**",
+        "assets/**",
+        "data/**",
+        "email-templates/**"
+      ]
     }
   },
   "rewrites": [
