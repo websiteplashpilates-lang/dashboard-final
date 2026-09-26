@@ -26,7 +26,7 @@ import * as memberBook from './pages/portal/book.js?v=117';
 import * as memberBookings from './pages/portal/bookings.js?v=117';
 import * as memberPackages from './pages/portal/packages.js';
 import * as memberCart from './pages/portal/cart.js?v=75';
-import * as memberPayments from './pages/portal/payments.js';
+import * as memberPayments from './pages/portal/payments.js?v=205';
 import * as memberProfile from './pages/portal/profile.js?v=104';
 
 // Page imports — Studio Admin
