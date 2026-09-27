@@ -2263,6 +2263,35 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
                       adminNotified: false
                     });
                     mutated = true;
+                  } else {
+                    if (!existing.memberName || existing.memberName === 'Member' || existing.memberName === 'Studio Member') {
+                      if (pass.member?.full_name) {
+                        existing.memberName = pass.member.full_name;
+                        mutated = true;
+                      }
+                    }
+                    if (!existing.packageName || existing.packageName === 'undefined' || existing.packageName === 'Barre Package') {
+                      if (pkgName) {
+                        existing.packageName = pkgName;
+                        mutated = true;
+                      }
+                    }
+                    if (!existing.memberEmail && pass.member?.email) {
+                      existing.memberEmail = pass.member.email;
+                      mutated = true;
+                    }
+                    if (!existing.memberPhone && pass.member?.phone) {
+                      existing.memberPhone = pass.member.phone;
+                      mutated = true;
+                    }
+                    if (!existing.memberId && pass.member_id) {
+                      existing.memberId = pass.member_id;
+                      mutated = true;
+                    }
+                    if (!existing.packageId && pass.package_id) {
+                      existing.packageId = pass.package_id;
+                      mutated = true;
+                    }
                   }
                 }
               });
@@ -2360,8 +2389,8 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
           }
         } else if (body.action === 'decide' && body.reviewId) {
           let r = reviews.find(x => x.id === body.reviewId || x.passId === body.reviewId.replace('prev-', ''));
+          const passId = body.reviewId.startsWith('prev-') ? body.reviewId.replace('prev-', '') : body.reviewId;
           if (!r) {
-            const passId = body.reviewId.startsWith('prev-') ? body.reviewId.replace('prev-', '') : body.reviewId;
             r = {
               id: body.reviewId,
               passId,
@@ -2369,6 +2398,27 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
               createdAt: new Date().toISOString()
             };
             reviews.unshift(r);
+          }
+
+          // Hydrate member & package details if missing on r
+          if ((!r.memberName || r.memberName === 'Member' || !r.packageName || r.packageName === 'undefined') && r.passId) {
+            try {
+              const passCheck = await fetch(`${SUPABASE_URL}/rest/v1/member_passes?id=eq.${encodeURIComponent(r.passId)}&select=*,member:profiles(*),package:packages(*)`, {
+                headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+              });
+              if (passCheck.ok) {
+                const passData = await passCheck.json();
+                if (passData && passData[0]) {
+                  const p = passData[0];
+                  if (!r.memberId) r.memberId = p.member_id;
+                  if (!r.memberName || r.memberName === 'Member') r.memberName = p.member?.full_name || 'Member';
+                  if (!r.memberEmail) r.memberEmail = p.member?.email || '';
+                  if (!r.memberPhone) r.memberPhone = p.member?.phone || '';
+                  if (!r.packageId) r.packageId = p.package_id;
+                  if (!r.packageName || r.packageName === 'undefined') r.packageName = p.package?.name || 'Barre Package';
+                }
+              }
+            } catch (_) {}
           }
 
           r.status = body.status; // 'accepted' | 'declined'

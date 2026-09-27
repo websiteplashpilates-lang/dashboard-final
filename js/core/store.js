@@ -2238,12 +2238,40 @@ export function getPartnerReviews() {
 
   // Ensure all partner reviews have real resolved member names & package details
   state.partnerReviews.forEach(r => {
+    // If passId present, link pass details
+    if (r.passId) {
+      const pass = (state.memberPasses || []).find(p => p.id === r.passId || p.id === r.passId.replace('prev-', ''));
+      if (pass) {
+        if (!r.memberId) r.memberId = pass.memberId || pass.member_id;
+        if (!r.packageId) r.packageId = pass.packageId || pass.package_id;
+        if (!r.packageName || r.packageName === 'undefined' || r.packageName === 'Barre Package') {
+          const pkg = getPackageById(pass.packageId || pass.package_id);
+          if (pkg && pkg.name) r.packageName = pkg.name;
+          else if (pass.packageName) r.packageName = pass.packageName;
+        }
+      }
+    }
+
+    if (!r.packageName || r.packageName === 'undefined') {
+      if (r.packageId) {
+        const pkg = getPackageById(r.packageId);
+        if (pkg && pkg.name) r.packageName = pkg.name;
+      }
+    }
+
     if (!r.memberName || r.memberName === 'Member' || r.memberName === 'Studio Member') {
-      const direct = state.members.find(m => m.id && String(m.id).toLowerCase() === String(r.memberId).toLowerCase());
-      if (direct && direct.fullName) {
-        r.memberName = direct.fullName;
-        if (!r.memberEmail && direct.email) r.memberEmail = direct.email;
-        if (!r.memberPhone && direct.phone) r.memberPhone = direct.phone;
+      const member = r.memberId ? (resolveMember(r.memberId) || getMemberById(r.memberId)) : null;
+      if (member && member.fullName) {
+        r.memberName = member.fullName;
+        if (!r.memberEmail && member.email) r.memberEmail = member.email;
+        if (!r.memberPhone && member.phone) r.memberPhone = member.phone;
+      } else {
+        const direct = state.members.find(m => m.id && String(m.id).toLowerCase() === String(r.memberId).toLowerCase());
+        if (direct && direct.fullName) {
+          r.memberName = direct.fullName;
+          if (!r.memberEmail && direct.email) r.memberEmail = direct.email;
+          if (!r.memberPhone && direct.phone) r.memberPhone = direct.phone;
+        }
       }
     }
   });
