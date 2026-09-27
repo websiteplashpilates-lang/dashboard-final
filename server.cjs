@@ -2709,7 +2709,7 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
                   apikey: supabaseKey,
                   Authorization: `Bearer ${supabaseKey}`,
                   'Content-Type': 'application/json',
-                  Prefer: 'return=representation'
+                  Prefer: 'resolution=merge-duplicates,return=representation'
                 },
                 body: JSON.stringify(supabaseRows)
               });

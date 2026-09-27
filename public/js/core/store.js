@@ -1443,7 +1443,7 @@ export function generateSessionsFromRules(weeksAhead = 4) {
         const d = new Date(today);
         d.setDate(today.getDate() + i);
         if (d.getDay() === targetDay) {
-          const dateStr = d.toISOString().slice(0, 10);
+          const dateStr = toISODate(d);
           // Check if session already exists for this date, time and discipline
           const exists = state.classSessions.some(
             s => s.date === dateStr && s.time === rule.time && (s.disciplineId === rule.disciplineId || s.discipline_id === rule.disciplineId)
@@ -1484,7 +1484,7 @@ export function generateSessionsFromRules(weeksAhead = 4) {
   if (createdSessions.length > 0) {
     saveClassSessionsCache();
     events.emit(EVENT.DATA_MUTATED, { source: 'batch_generate_sessions', count: createdSessions.length });
-    (async () => {
+    const batchPromise = (async () => {
       try {
         const baseUrl = typeof window !== 'undefined' ? '' : 'http://127.0.0.1:3333';
         await fetch(`${baseUrl}/api/admin/class-session`, {
@@ -1496,6 +1496,7 @@ export function generateSessionsFromRules(weeksAhead = 4) {
         console.warn('[generateSessionsFromRules sync warning]', e);
       }
     })();
+    createdSessions._promise = batchPromise;
   }
 
   return createdSessions;

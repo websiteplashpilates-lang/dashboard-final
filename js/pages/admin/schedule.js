@@ -364,9 +364,13 @@ function renderRecurringRulesView(parentEl, container) {
     ]
   });
 
-  genBtn.addEventListener('click', () => {
+  genBtn.addEventListener('click', async () => {
     const weeks = parseInt(weeksSelect.value, 10);
+    genBtn.disabled = true;
     const created = store.generateSessionsFromRules(weeks);
+    if (created && created._promise) {
+      await created._promise.catch(() => {});
+    }
     showToast(`Successfully generated & published ${created.length} sessions for next ${weeks} weeks.`, 'success');
     render(container);
   });
