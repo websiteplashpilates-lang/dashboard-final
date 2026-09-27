@@ -21,9 +21,9 @@ import * as authSignup from './pages/auth/signup.js?v=102';
 import * as authResetPassword from './pages/auth/reset-password.js?v=102';
 
 // Page imports — Member Portal
-import * as memberDashboard from './pages/portal/dashboard.js?v=75';
-import * as memberBook from './pages/portal/book.js?v=117';
-import * as memberBookings from './pages/portal/bookings.js?v=117';
+import * as memberDashboard from './pages/portal/dashboard.js?v=230';
+import * as memberBook from './pages/portal/book.js?v=230';
+import * as memberBookings from './pages/portal/bookings.js?v=230';
 import * as memberPackages from './pages/portal/packages.js';
 import * as memberCart from './pages/portal/cart.js?v=75';
 import * as memberPayments from './pages/portal/payments.js?v=205';
@@ -34,8 +34,8 @@ import * as adminOverview from './pages/admin/overview.js';
 import * as adminMembers from './pages/admin/members.js?v=107';
 import * as adminProspects from './pages/admin/prospects.js?v=106';
 import * as adminActivityLogs from './pages/admin/activity-logs.js';
-import * as adminMemberDetail from './pages/admin/member-detail.js';
-import * as adminSchedule from './pages/admin/schedule.js';
+import * as adminMemberDetail from './pages/admin/member-detail.js?v=230';
+import * as adminSchedule from './pages/admin/schedule.js?v=230';
 import * as adminPackages from './pages/admin/packages.js';
 import * as adminBookings from './pages/admin/bookings.js?v=123';
 import * as adminPayments from './pages/admin/payments.js';
