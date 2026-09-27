@@ -193,7 +193,10 @@ async function handleRouteChange() {
 
   try {
     await match.renderFn(mainContainer, match.params);
-    if (navToken !== currentNavToken) return;
+    if (navToken !== currentNavToken) {
+      mainContainer.innerHTML = '';
+      return;
+    }
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
       window.lucide.createIcons({ root: mainContainer });
     }

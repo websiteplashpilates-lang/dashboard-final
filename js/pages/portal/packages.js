@@ -6,7 +6,7 @@
  * @module pages/portal/packages
  */
 
-import { createElement } from '../../utils/dom.js';
+import { createElement, clearChildren } from '../../utils/dom.js';
 import * as store from '../../core/store.js';
 import * as cart from '../../core/cart.js';
 import { showToast } from '../../components/toast.js';
@@ -559,9 +559,15 @@ const CATEGORIES = [
   }
 ];
 
+let pkgRenderSeq = 0;
+
 export async function render(container) {
+  const currentSeq = ++pkgRenderSeq;
+  clearChildren(container);
   injectStylesOnce();
   await store.fetchPackages();
+
+  if (currentSeq !== pkgRenderSeq) return;
 
   // Reset any custom background so original studio theme shines through
   if (container) {
@@ -820,6 +826,7 @@ export async function render(container) {
     });
   }
 
+  clearChildren(container);
   container.appendChild(wrapper);
 
   if (window.lucide && typeof window.lucide.createIcons === 'function') {

@@ -4,7 +4,7 @@
  * @module pages/portal/dashboard
  */
 
-import { createElement } from '../../utils/dom.js';
+import { createElement, clearChildren } from '../../utils/dom.js';
 import { formatDate, formatTime } from '../../utils/format.js';
 import * as auth from '../../core/auth.js';
 import * as store from '../../core/store.js';
@@ -14,7 +14,11 @@ import { createEmptyState } from '../../components/empty-state.js';
 import { showToast } from '../../components/toast.js';
 import { openForgotPasswordModal } from '../../components/forgot-password-modal.js';
 
+let dashRenderSeq = 0;
+
 export async function render(container) {
+  const currentSeq = ++dashRenderSeq;
+  clearChildren(container);
   const memberId = auth.getCurrentMemberId();
 
   if (memberId) {
@@ -26,6 +30,8 @@ export async function render(container) {
       ]);
     } catch (_) {}
   }
+
+  if (currentSeq !== dashRenderSeq) return;
 
   const member = store.resolveMember(memberId) || store.getMemberById(memberId);
   const pass = store.getActiveMemberPass(memberId);
@@ -203,6 +209,7 @@ export async function render(container) {
   bottomGrid.appendChild(advisoryCol);
 
   page.appendChild(bottomGrid);
+  clearChildren(container);
   container.appendChild(page);
 
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
