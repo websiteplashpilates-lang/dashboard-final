@@ -1505,7 +1505,7 @@ export async function dbGetBookings(memberId = null) {
   });
 
   const rawData = Array.from(bMap.values());
-  if (rawData.length === 0) return null;
+  if (rawData.length === 0) return [];
 
   return rawData.map(b => {
     let status = b.status;
@@ -1514,6 +1514,18 @@ export async function dbGetBookings(memberId = null) {
     const mEmail = b.memberEmail || b.member_email || (b.member && b.member.email) || '';
     const mPhone = b.memberPhone || b.member_phone || (b.member && b.member.phone) || '';
     const resolvedMember = b.member || (mName ? { id: b.member_id || b.memberId, full_name: mName, fullName: mName, email: mEmail, phone: mPhone } : null);
+
+    let session = b.session ? { ...b.session } : null;
+    if (session) {
+      session.id = session.id || b.session_id || b.sessionId;
+      session.disciplineId = session.disciplineId || session.discipline_id || 'disc-pilates';
+      session.startsAt = session.startsAt || session.start_time || session.startTime;
+      if (session.startsAt && (!session.date || !session.time)) {
+        const d = new Date(session.startsAt);
+        session.date = session.date || d.toISOString().slice(0, 10);
+        session.time = session.time || d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' });
+      }
+    }
 
     return {
       id: b.id,
@@ -1528,7 +1540,7 @@ export async function dbGetBookings(memberId = null) {
       memberEmail: mEmail,
       memberPhone: mPhone,
       member: resolvedMember,
-      session: b.session
+      session
     };
   });
 }

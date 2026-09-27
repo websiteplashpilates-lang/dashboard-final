@@ -108,7 +108,7 @@ export async function render(container) {
     const card = createElement('div', { className: 'next-session-card' });
 
     const dateBox = createElement('div', { className: 'next-session-date' });
-    const sessionDate = new Date(`${session.date}T${session.time}`);
+    const sessionDate = session.startsAt ? new Date(session.startsAt) : (session.date && session.time ? new Date(`${session.date}T${session.time}`) : new Date());
     const dayNum = createElement('div', { className: 'next-session-date-day', text: String(sessionDate.getDate()) });
     const monthName = createElement('div', { className: 'next-session-date-month', text: sessionDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase() });
     dateBox.append(dayNum, monthName);

@@ -18,10 +18,11 @@ import { events, EVENT } from '../../core/events.js';
 export async function render(container) {
   const memberId = auth.getCurrentMemberId();
 
-  // Authoritative live sync for both class sessions and member passes/credits on page refresh
+  // Authoritative live sync for class sessions, member bookings, and passes/credits on page refresh
   try {
     await Promise.all([
       store.syncClassSessions(),
+      memberId ? store.syncBookings(memberId).catch(() => {}) : Promise.resolve(),
       memberId ? store.fetchMemberPasses(memberId).catch(() => {}) : Promise.resolve()
     ]);
   } catch (_) {}
@@ -270,6 +271,9 @@ export async function render(container) {
   container.appendChild(page);
 
   events.on(EVENT.DATA_MUTATED, () => {
+    renderClassList();
+  });
+  events.on(EVENT.BOOKING_CREATED, () => {
     renderClassList();
   });
 

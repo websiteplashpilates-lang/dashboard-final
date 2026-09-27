@@ -13,6 +13,7 @@ import { createBadge } from '../../components/badge.js';
 import { createEmptyState } from '../../components/empty-state.js';
 import { showToast } from '../../components/toast.js';
 import { openModal } from '../../components/modal.js';
+import { events, EVENT } from '../../core/events.js';
 
 export async function render(container) {
   const memberId = auth.getCurrentMemberId();
@@ -40,9 +41,12 @@ export async function render(container) {
   header.append(titleGroup, refreshBtn);
   page.appendChild(header);
 
-  // Synchronize live bookings from Supabase
+  // Synchronize live bookings and class sessions from Supabase
   try {
-    await store.syncBookings(memberId);
+    await Promise.all([
+      store.syncBookings(memberId).catch(() => {}),
+      store.syncClassSessions().catch(() => {})
+    ]);
   } catch (_) {}
 
   // Tabs container
@@ -57,7 +61,10 @@ export async function render(container) {
   refreshBtn.addEventListener('click', async () => {
     refreshBtn.disabled = true;
     try {
-      await store.syncBookings(memberId);
+      await Promise.all([
+        store.syncBookings(memberId).catch(() => {}),
+        store.syncClassSessions().catch(() => {})
+      ]);
       refreshTabs();
       showToast('Bookings synced with studio database.', 'info');
     } catch (err) {
@@ -84,6 +91,13 @@ export async function render(container) {
   refreshTabs();
   page.appendChild(tabs);
   container.appendChild(page);
+
+  events.on(EVENT.BOOKING_CREATED, () => {
+    refreshTabs();
+  });
+  events.on(EVENT.DATA_MUTATED, () => {
+    refreshTabs();
+  });
 
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
     window.lucide.createIcons({ root: container });

@@ -1558,8 +1558,9 @@ export function cloneClassSession(sessionId, targetDate, targetTime) {
 
 export function getSessionStartTime(session) {
   if (!session) return null;
-  if (session.startsAt) {
-    const d = new Date(session.startsAt);
+  const rawStart = session.startsAt || session.start_time || session.startTime;
+  if (rawStart) {
+    const d = new Date(rawStart);
     if (!isNaN(d.getTime())) return d;
   }
   if (session.date && session.time) {
@@ -1659,6 +1660,7 @@ export async function bookClass(memberId, sessionId) {
     bookedAt: createdBooking?.booked_at || createdBooking?.bookedAt || new Date().toISOString(),
     decidedAt: null,
     decidedBy: null,
+    session: session ? { ...session } : null
   };
   const existingIdx = state.bookings.findIndex(
     b => b.id === booking.id || (isMemberIdMatch(b.memberId, memberId) && (b.classSessionId === sessionId || b.sessionId === sessionId) && b.status !== 'cancelled')
@@ -1676,6 +1678,7 @@ export async function bookClass(memberId, sessionId) {
   logActivity(memberId, 'member', `Booked ${disc ? disc.name : 'Class'} session`, 'booking');
 
   events.emit(EVENT.BOOKING_CREATED, { booking, session });
+  events.emit(EVENT.DATA_MUTATED, { source: 'book_class', booking, session });
   return Object.assign(booking, { booking, session });
 }
 
@@ -1852,14 +1855,15 @@ function enrichBooking(b) {
   let session = getClassSessionById(sId);
   if (!session && b.session) {
     session = { ...b.session };
-    if (session.start_time && !session.date) {
-      const d = new Date(session.start_time);
-      session.date = d.toISOString().slice(0, 10);
-      session.time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
-      session.startsAt = session.start_time;
-      session.durationMinutes = session.duration_min || 60;
-      session.disciplineId = session.discipline_id;
-      session.trainerId = session.trainer_id;
+    const rawStart = session.startsAt || session.start_time || session.startTime;
+    if (rawStart && (!session.date || !session.time)) {
+      const d = new Date(rawStart);
+      session.date = session.date || d.toISOString().slice(0, 10);
+      session.time = session.time || d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' });
+      session.startsAt = rawStart;
+      session.durationMinutes = session.durationMinutes || session.duration_min || 60;
+      session.disciplineId = session.disciplineId || session.discipline_id;
+      session.trainerId = session.trainerId || session.trainer_id;
     }
   }
   const member = getMemberById(b.memberId) || b.member;
@@ -1881,7 +1885,9 @@ export async function syncBookings(memberId = null) {
   try {
     const remote = await dbGetBookings(memberId);
     if (Array.isArray(remote)) {
-      state.bookings = remote;
+      const remoteIds = new Set(remote.map(r => r.id));
+      const pendingLocal = state.bookings.filter(b => b && b.id && !remoteIds.has(b.id));
+      state.bookings = [...remote, ...pendingLocal];
       saveBookingsCache();
       events.emit(EVENT.DATA_MUTATED, { source: 'sync_bookings' });
     }
@@ -1907,7 +1913,7 @@ export function getBookingsForMember(memberId, category) {
       
       switch (category) {
         case 'upcoming': 
-          return ['upcoming', 'confirmed'].includes(b.status) && session && !isSessionPast(session);
+          return ['upcoming', 'confirmed'].includes(b.status) && (!session || !isSessionPast(session));
         case 'pending': 
           return b.status === 'pending_partner_approval';
         case 'past': 
