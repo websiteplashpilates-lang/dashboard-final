@@ -32,11 +32,14 @@ export function createPassCard(pass, credits = []) {
   if (credits && credits.length > 0) {
     const creditsContainer = createElement('div', { className: 'pass-card-credits' });
 
-    const pendingReviews = store.getPartnerReviews ? store.getPartnerReviews() : [];
-    const isPassPendingBarre = pass && pendingReviews.some(r => 
-      (r.passId === pass.id || (r.memberId === pass.memberId && r.packageId === pass.packageId)) && 
-      r.status === 'pending'
-    );
+    let isPassPendingBarre = false;
+    try {
+      const pendingReviews = typeof store.getPartnerReviews === 'function' ? store.getPartnerReviews() : [];
+      isPassPendingBarre = pass && pendingReviews.some(r => 
+        (r.passId === pass.id || (r.memberId === pass.memberId && r.packageId === pass.packageId)) && 
+        r.status === 'pending'
+      );
+    } catch (_) {}
 
     credits.forEach(item => {
       const row = createElement('div', { className: 'pass-credit-row' });

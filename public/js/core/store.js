@@ -759,38 +759,6 @@ export function getMemberById(id) {
     }
   }
 
-  // Fallback to payments with embedded member details
-  if (Array.isArray(state.payments)) {
-    const pay = state.payments.find(p => (p.memberId || p.member_id) && String(p.memberId || p.member_id).toLowerCase() === targetId && (p.memberName || p.member_name || p.memberEmail || p.member_email));
-    if (pay) {
-      const name = pay.memberName || pay.member_name || pay.userName || (pay.memberEmail || pay.member_email || '').split('@')[0] || 'Studio Member';
-      return {
-        id: pay.memberId || pay.member_id,
-        fullName: name,
-        name: name,
-        email: pay.memberEmail || pay.member_email || '',
-        phone: pay.memberPhone || pay.member_phone || '',
-        tier: 'First Circle'
-      };
-    }
-  }
-
-  // Fallback to active pass details
-  if (Array.isArray(state.memberPasses)) {
-    const pass = state.memberPasses.find(p => (p.memberId || p.member_id) && String(p.memberId || p.member_id).toLowerCase() === targetId && (p.memberName || p.memberEmail));
-    if (pass) {
-      const name = pass.memberName || (pass.memberEmail ? pass.memberEmail.split('@')[0] : 'Studio Member');
-      return {
-        id: pass.memberId || pass.member_id,
-        fullName: name,
-        name: name,
-        email: pass.memberEmail || '',
-        phone: pass.memberPhone || '',
-        tier: 'First Circle'
-      };
-    }
-  }
-
   return null;
 }
 
@@ -2271,11 +2239,11 @@ export function getPartnerReviews() {
   // Ensure all partner reviews have real resolved member names & package details
   state.partnerReviews.forEach(r => {
     if (!r.memberName || r.memberName === 'Member' || r.memberName === 'Studio Member') {
-      const m = resolveMember(r.memberId) || getMemberById(r.memberId);
-      if (m && m.fullName && m.fullName !== 'Member') {
-        r.memberName = m.fullName;
-        if (!r.memberEmail && m.email) r.memberEmail = m.email;
-        if (!r.memberPhone && m.phone) r.memberPhone = m.phone;
+      const direct = state.members.find(m => m.id && String(m.id).toLowerCase() === String(r.memberId).toLowerCase());
+      if (direct && direct.fullName) {
+        r.memberName = direct.fullName;
+        if (!r.memberEmail && direct.email) r.memberEmail = direct.email;
+        if (!r.memberPhone && direct.phone) r.memberPhone = direct.phone;
       }
     }
   });
