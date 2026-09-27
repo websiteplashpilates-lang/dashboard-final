@@ -70,12 +70,11 @@ export async function render(container) {
   const statsGrid = createElement('div', { className: 'grid grid-3 dashboard-stats' });
 
   const totalCreditsRemaining = credits.reduce((acc, c) => acc + c.remaining, 0);
-  const totalCreditsIncluded = credits.reduce((acc, c) => acc + c.included, 0);
 
   const creditsStat = createStatCard({
     label: 'Remaining Sessions',
     value: totalCreditsRemaining,
-    detail: totalCreditsIncluded > 0 ? `out of ${totalCreditsIncluded} total allocated` : 'Purchase a pass to book'
+    detail: totalCreditsRemaining > 0 ? 'Available across active passes' : 'Purchase a pass to book'
   });
 
   const streakStat = createStatCard({

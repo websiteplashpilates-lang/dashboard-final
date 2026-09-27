@@ -28,4 +28,13 @@ function copyRecursive(src, dest) {
   }
 });
 
+// Sync embedded serverless HTML string for Vercel SSR
+const idxHtmlPath = path.join(ROOT, 'index.html');
+const embeddedPath = path.join(ROOT, 'email-templates', 'index-html-string.cjs');
+if (fs.existsSync(idxHtmlPath)) {
+  const htmlContent = fs.readFileSync(idxHtmlPath, 'utf8');
+  fs.writeFileSync(embeddedPath, `module.exports = ${JSON.stringify(htmlContent)};\n`, 'utf8');
+  console.log('[sync-public] Successfully updated email-templates/index-html-string.cjs');
+}
+
 console.log('[sync-public] Successfully synced static assets to public/');
