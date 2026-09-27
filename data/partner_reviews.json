@@ -61,26 +61,6 @@
     "adminNotified": false
   },
   {
-    "id": "prev-test-audit-2",
-    "passId": "test-audit-2",
-    "status": "declined",
-    "createdAt": "2026-09-23T02:07:53.961Z",
-    "decisionReason": "High impact barre contraindicated for lumbar herniation",
-    "decidedAt": "2026-09-26T14:31:07.571Z",
-    "decidedBy": "Lead Coach Ritika",
-    "adminNotified": true
-  },
-  {
-    "id": "prev-test-audit-1",
-    "passId": "test-audit-1",
-    "status": "accepted",
-    "createdAt": "2026-09-23T02:07:53.825Z",
-    "decisionReason": null,
-    "decidedAt": "2026-09-26T14:31:07.440Z",
-    "decidedBy": "Lead Coach Sneha",
-    "adminNotified": true
-  },
-  {
     "id": "prev-pass-17119272",
     "passId": "pass-17119272",
     "memberId": "3ed85f43-b912-499e-912a-54c15783f3f9",

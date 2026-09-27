@@ -2283,8 +2283,11 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
           console.warn('[Partner reviews Supabase sync non-fatal error]', syncErr.message);
         }
 
+        // Exclude dummy unassigned test records from response
+        const cleanReviews = reviews.filter(r => !((r.id === 'prev-test-audit-1' || r.id === 'prev-test-audit-2') && (!r.memberName || r.memberName === 'Member')));
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ success: true, reviews }));
+        return res.end(JSON.stringify({ success: true, reviews: cleanReviews }));
       } catch (err) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ error: err.message }));

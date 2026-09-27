@@ -56,7 +56,7 @@ export function createPassCard(pass, credits = []) {
       });
       countWrapper.appendChild(count);
 
-      if (isBarre && isPassPendingBarre) {
+      if (isBarre && isZero && isPassPendingBarre) {
         const pendingBadge = createElement('span', {
           style: 'font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; background: #FFF4E5; color: #B76E00; border: 1px solid #FFE0B2; padding: 2px 6px; border-radius: 4px; white-space: nowrap;',
           text: 'Pending Partner Approval'
