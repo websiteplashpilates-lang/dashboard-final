@@ -9,7 +9,7 @@ import { formatDate, formatTime } from '../../utils/format.js';
 import * as auth from '../../core/auth.js';
 import * as store from '../../core/store.js';
 import { createStatCard } from '../../components/stat-card.js';
-import { createPassCard } from '../../components/pass-card.js';
+import { createPassCard } from '../../components/pass-card.js?v=228';
 import { createEmptyState } from '../../components/empty-state.js';
 import { showToast } from '../../components/toast.js';
 import { openForgotPasswordModal } from '../../components/forgot-password-modal.js';
