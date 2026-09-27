@@ -603,10 +603,16 @@ export function openAttendanceModal(batch, onSaveSuccess) {
       memberInfo.append(memberName, memberMeta);
 
       let currentBadge = null;
-      if (attendee.status === 'completed' || attendee.status === 'no_show') {
+      if (attendee.status === 'completed') {
         currentBadge = createElement('span', {
-          style: `font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; ${attendee.status === 'completed' ? 'background: rgba(74,122,96,0.14); color: #2E5A44;' : 'background: rgba(217,83,79,0.14); color: #B52B27;'}`,
-          text: attendee.status === 'completed' ? 'Marked: Attended' : 'Marked: No-Show'
+          style: 'font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: rgba(74,122,96,0.14); color: #2E5A44;',
+          text: 'Marked: Attended'
+        });
+      } else if (attendee.status === 'no_show') {
+        const isRefunded = !!attendee.creditWaived;
+        currentBadge = createElement('span', {
+          style: `font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; ${isRefunded ? 'background: rgba(43,108,176,0.14); color: #2B6CB0;' : 'background: rgba(217,83,79,0.14); color: #B52B27;'}`,
+          text: isRefunded ? 'Marked: Absent (Credit Refunded)' : 'Marked: Absent (Credit Forfeited)'
         });
       }
 
@@ -808,7 +814,13 @@ export function openAttendanceModal(batch, onSaveSuccess) {
           } else if (choice === 'no_show') {
             const isRefund = refundState[attendee.bookingId] === true;
             const reason = reasonState[attendee.bookingId] || (isRefund ? 'Genuine reason (Trainer refund)' : '');
-            await store.markAttendance(attendee.bookingId, 'no_show', { refundCredit: isRefund, reason });
+            await store.markAttendance(attendee.bookingId, 'no_show', {
+              refundCredit: isRefund,
+              reason,
+              memberId: attendee.memberId,
+              sessionId: batch.id,
+              disciplineId: batch.disciplineId
+            });
             savedCount++;
             if (isRefund) waivedCount++;
             else forfeitedCount++;

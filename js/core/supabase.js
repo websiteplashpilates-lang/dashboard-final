@@ -507,12 +507,14 @@ export async function dbCreateBooking({ memberId, sessionId, passId, disciplineI
     try {
       const { data, error } = await client
         .from('bookings')
-        .insert({
+        .upsert({
           member_id: memberId,
           session_id: sessionId,
           pass_id: passId,
-          status: 'confirmed'
-        })
+          status: 'confirmed',
+          booked_at: new Date().toISOString(),
+          cancelled_at: null
+        }, { onConflict: 'member_id,session_id' })
         .select()
         .single();
 

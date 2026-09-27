@@ -1,5 +1,14 @@
 [
   {
+    "id": "book-1790522007877",
+    "member_id": "3ed85f43-b912-499e-912a-54c15783f3f9",
+    "session_id": "session-106",
+    "pass_id": "pass-wWlmmWLocLdj",
+    "status": "upcoming",
+    "booked_at": "2026-09-27T15:13:27.877Z",
+    "cancelled_at": null
+  },
+  {
     "id": "book-1790395866585",
     "member_id": "1cfff2c5-38ec-4adb-be8f-1eda93366d5f",
     "session_id": "session-106",

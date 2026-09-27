@@ -1729,37 +1729,63 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
         const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
 
         if (action === 'create') {
+          const supabaseStatus = (status === 'upcoming' || !status) ? 'confirmed' : status;
           const newBooking = {
             id: bookingId || `book-${Date.now()}`,
             member_id: memberId,
             session_id: sessionId,
             pass_id: passId || null,
             status: status || 'upcoming',
-            booked_at: new Date().toISOString()
+            booked_at: new Date().toISOString(),
+            cancelled_at: null
           };
 
-          // Authoritative local file persistence
+          // Authoritative local file persistence: update existing or insert new
           const localBookings = getBookingsFromFile();
-          if (!localBookings.some(b => b.id === newBooking.id || (b.member_id === newBooking.member_id && b.session_id === newBooking.session_id && b.status !== 'cancelled'))) {
+          const existingIdx = localBookings.findIndex(b =>
+            (newBooking.id && b.id === newBooking.id) ||
+            ((b.member_id === newBooking.member_id || b.memberId === newBooking.member_id) &&
+             (b.session_id === newBooking.session_id || b.sessionId === newBooking.session_id))
+          );
+          if (existingIdx >= 0) {
+            localBookings[existingIdx] = {
+              ...localBookings[existingIdx],
+              ...newBooking,
+              status: 'upcoming',
+              cancelled_at: null
+            };
+          } else {
             localBookings.unshift(newBooking);
-            saveBookingsToFile(localBookings);
           }
+          saveBookingsToFile(localBookings);
 
           let created = null;
           try {
-            const bRes = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
+            const bRes = await fetch(`${SUPABASE_URL}/rest/v1/bookings?on_conflict=member_id,session_id`, {
               method: 'POST',
               headers: {
                 apikey: supabaseKey,
                 Authorization: `Bearer ${supabaseKey}`,
                 'Content-Type': 'application/json',
-                Prefer: 'return=representation'
+                Prefer: 'resolution=merge-duplicates,return=representation'
               },
-              body: JSON.stringify(newBooking)
+              body: JSON.stringify({
+                member_id: memberId,
+                session_id: sessionId,
+                pass_id: passId || null,
+                status: supabaseStatus,
+                booked_at: newBooking.booked_at,
+                cancelled_at: null
+              })
             });
             if (bRes.ok) {
               const resJson = await bRes.json();
-              if (resJson && resJson[0]) created = resJson[0];
+              if (resJson && resJson[0]) {
+                created = {
+                  ...resJson[0],
+                  status: 'upcoming'
+                };
+              }
             }
           } catch (_) {}
 
@@ -1909,7 +1935,10 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
 
           // Update local bookings file
           const localBookings = getBookingsFromFile();
-          const target = localBookings.find(b => b.id === bookingId);
+          const target = localBookings.find(b =>
+            b.id === bookingId ||
+            (memberId && sessionId && (b.member_id === memberId || b.memberId === memberId) && (b.session_id === sessionId || b.sessionId === sessionId))
+          );
           if (target) {
             target.status = 'cancelled';
             target.cancelled_at = patch.cancelled_at;

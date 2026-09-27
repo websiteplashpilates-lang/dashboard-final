@@ -73,13 +73,42 @@ export async function render(container) {
       });
 
       const info = createElement('div', { style: 'flex: 1; min-width: 260px;' });
+      // Resolve member and package display names
+      let displayMemberName = rev.memberName;
+      if (!displayMemberName || displayMemberName === 'Member' || displayMemberName === 'Studio Member') {
+        let mId = rev.memberId;
+        if (!mId && rev.passId) {
+          const pass = (store.getState().memberPasses || []).find(p => p.id === rev.passId || p.id === rev.passId.replace('prev-', ''));
+          if (pass) mId = pass.memberId || pass.member_id;
+        }
+        if (mId) {
+          const m = store.resolveMember(mId) || store.getMemberById(mId);
+          if (m && m.fullName) displayMemberName = m.fullName;
+        }
+      }
+      if (!displayMemberName || displayMemberName === 'Member') displayMemberName = 'Plash Member';
+
+      let displayPackageName = rev.packageName;
+      if (!displayPackageName || displayPackageName === 'undefined' || displayPackageName === 'Barre Package') {
+        let pkgId = rev.packageId;
+        if (!pkgId && rev.passId) {
+          const pass = (store.getState().memberPasses || []).find(p => p.id === rev.passId || p.id === rev.passId.replace('prev-', ''));
+          if (pass) pkgId = pass.packageId || pass.package_id;
+        }
+        if (pkgId) {
+          const p = store.getPackageById(pkgId);
+          if (p && p.name) displayPackageName = p.name;
+        }
+      }
+      if (!displayPackageName || displayPackageName === 'undefined') displayPackageName = 'Barre Package';
+
       const mName = createElement('div', {
         style: 'font-size: var(--text-base); font-weight: var(--weight-bold); color: var(--ink); margin-bottom: 2px;',
-        text: rev.memberName || 'Member'
+        text: displayMemberName
       });
       const meta = createElement('div', {
         style: 'font-size: var(--text-xs); color: var(--ink-50); margin-bottom: var(--space-2);',
-        text: `Package: ${rev.packageName} · Enrolled: ${formatDate(rev.createdAt)}`
+        text: `Package: ${displayPackageName} · Enrolled: ${formatDate(rev.createdAt)}`
       });
 
       const healthSnippet = createElement('div', {

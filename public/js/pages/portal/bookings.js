@@ -15,7 +15,11 @@ import { showToast } from '../../components/toast.js';
 import { openModal } from '../../components/modal.js';
 import { events, EVENT } from '../../core/events.js';
 
+let renderSeq = 0;
+
 export async function render(container) {
+  const currentSeq = ++renderSeq;
+  clearChildren(container);
   const memberId = auth.getCurrentMemberId();
   const page = createElement('div', { className: 'page-container' });
 
@@ -41,13 +45,17 @@ export async function render(container) {
   header.append(titleGroup, refreshBtn);
   page.appendChild(header);
 
-  // Synchronize live bookings and class sessions from Supabase
+  // Synchronize live bookings, class sessions, and passes from Supabase
   try {
     await Promise.all([
       store.syncBookings(memberId).catch(() => {}),
-      store.syncClassSessions().catch(() => {})
+      store.syncClassSessions().catch(() => {}),
+      memberId ? store.fetchMemberPasses(memberId).catch(() => {}) : Promise.resolve()
     ]);
   } catch (_) {}
+
+  // If superseded by a newer render invocation, abort to prevent duplicate rendering
+  if (currentSeq !== renderSeq) return;
 
   // Tabs container
   const upcomingContent = createElement('div');
@@ -63,7 +71,8 @@ export async function render(container) {
     try {
       await Promise.all([
         store.syncBookings(memberId).catch(() => {}),
-        store.syncClassSessions().catch(() => {})
+        store.syncClassSessions().catch(() => {}),
+        memberId ? store.fetchMemberPasses(memberId).catch(() => {}) : Promise.resolve()
       ]);
       refreshTabs();
       showToast('Bookings synced with studio database.', 'info');
@@ -90,14 +99,28 @@ export async function render(container) {
 
   refreshTabs();
   page.appendChild(tabs);
+
+  // Clear container before append to ensure no duplicate page instances
+  clearChildren(container);
   container.appendChild(page);
 
-  events.on(EVENT.BOOKING_CREATED, () => {
+  const onBookingCreated = () => {
+    if (!document.body.contains(page)) {
+      events.off(EVENT.BOOKING_CREATED, onBookingCreated);
+      return;
+    }
     refreshTabs();
-  });
-  events.on(EVENT.DATA_MUTATED, () => {
+  };
+  const onDataMutated = () => {
+    if (!document.body.contains(page)) {
+      events.off(EVENT.DATA_MUTATED, onDataMutated);
+      return;
+    }
     refreshTabs();
-  });
+  };
+
+  events.on(EVENT.BOOKING_CREATED, onBookingCreated);
+  events.on(EVENT.DATA_MUTATED, onDataMutated);
 
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
     window.lucide.createIcons({ root: container });

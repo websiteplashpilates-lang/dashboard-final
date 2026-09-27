@@ -15,7 +15,11 @@ import { showToast } from '../../components/toast.js';
 import { openModal } from '../../components/modal.js';
 import { events, EVENT } from '../../core/events.js';
 
+let bookRenderSeq = 0;
+
 export async function render(container) {
+  const currentSeq = ++bookRenderSeq;
+  clearChildren(container);
   const memberId = auth.getCurrentMemberId();
 
   // Authoritative live sync for class sessions, member bookings, and passes/credits on page refresh
@@ -26,6 +30,8 @@ export async function render(container) {
       memberId ? store.fetchMemberPasses(memberId).catch(() => {}) : Promise.resolve()
     ]);
   } catch (_) {}
+
+  if (currentSeq !== bookRenderSeq) return;
 
   const page = createElement('div', { className: 'page-container' });
 
@@ -268,14 +274,26 @@ export async function render(container) {
   }
 
   renderClassList();
+  clearChildren(container);
   container.appendChild(page);
 
-  events.on(EVENT.DATA_MUTATED, () => {
+  const onDataMutated = () => {
+    if (!document.body.contains(page)) {
+      events.off(EVENT.DATA_MUTATED, onDataMutated);
+      return;
+    }
     renderClassList();
-  });
-  events.on(EVENT.BOOKING_CREATED, () => {
+  };
+  const onBookingCreated = () => {
+    if (!document.body.contains(page)) {
+      events.off(EVENT.BOOKING_CREATED, onBookingCreated);
+      return;
+    }
     renderClassList();
-  });
+  };
+
+  events.on(EVENT.DATA_MUTATED, onDataMutated);
+  events.on(EVENT.BOOKING_CREATED, onBookingCreated);
 
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
     window.lucide.createIcons({ root: container });

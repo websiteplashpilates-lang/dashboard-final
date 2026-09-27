@@ -45,11 +45,12 @@ export async function render(container) {
   header.append(titleGroup, refreshBtn);
   page.appendChild(header);
 
-  // Synchronize live bookings and class sessions from Supabase
+  // Synchronize live bookings, class sessions, and passes from Supabase
   try {
     await Promise.all([
       store.syncBookings(memberId).catch(() => {}),
-      store.syncClassSessions().catch(() => {})
+      store.syncClassSessions().catch(() => {}),
+      memberId ? store.fetchMemberPasses(memberId).catch(() => {}) : Promise.resolve()
     ]);
   } catch (_) {}
 
@@ -70,7 +71,8 @@ export async function render(container) {
     try {
       await Promise.all([
         store.syncBookings(memberId).catch(() => {}),
-        store.syncClassSessions().catch(() => {})
+        store.syncClassSessions().catch(() => {}),
+        memberId ? store.fetchMemberPasses(memberId).catch(() => {}) : Promise.resolve()
       ]);
       refreshTabs();
       showToast('Bookings synced with studio database.', 'info');

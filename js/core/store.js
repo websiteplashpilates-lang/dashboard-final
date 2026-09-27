@@ -358,11 +358,16 @@ export async function syncFromSupabase() {
       state.memberPasses.forEach(p => {
         if (Array.isArray(p.credits)) {
           p.credits.forEach(c => {
+            const total = c.sessionsIncluded !== undefined ? c.sessionsIncluded : (c.total_credits || c.remainingCredits || 0);
+            const used = c.sessionsUsed !== undefined ? c.sessionsUsed : Math.max(0, total - (c.remainingCredits ?? c.remaining_credits ?? 0));
+            const rem = c.remainingCredits !== undefined ? c.remainingCredits : (c.remaining_credits !== undefined ? c.remaining_credits : Math.max(0, total - used));
             allCredits.push({
               memberPassId: p.id,
-              disciplineId: c.disciplineId,
-              sessionsIncluded: c.sessionsIncluded,
-              sessionsUsed: c.sessionsUsed,
+              disciplineId: c.disciplineId || c.discipline_id,
+              sessionsIncluded: total,
+              sessionsUsed: used,
+              remainingCredits: rem,
+              remaining_credits: rem
             });
           });
         }
@@ -1039,7 +1044,13 @@ export function getActiveMemberPass(memberId, disciplineId = null) {
     const passWithCredits = validPasses.find(p => {
       const credits = getPassCredits(p.id);
       const c = credits.find(cr => cr.disciplineId === normDisciplineId || cr.disciplineId === disciplineId);
-      return c && (c.sessionsIncluded - c.sessionsUsed) > 0;
+      if (!c) return false;
+      const rem = c.remainingCredits !== undefined
+        ? c.remainingCredits
+        : (c.remaining_credits !== undefined
+          ? c.remaining_credits
+          : ((c.sessionsIncluded || 0) - (c.sessionsUsed || 0)));
+      return rem > 0;
     });
     if (passWithCredits) return enrichPass(passWithCredits);
   }
@@ -1054,16 +1065,38 @@ export function getActiveMemberPass(memberId, disciplineId = null) {
  * @returns {Array}
  */
 export function getPassCredits(memberPassId) {
-  const credits = state.memberPassCredits.filter(c => c.memberPassId === memberPassId);
-  if (credits.length > 0) return credits;
+  const credits = state.memberPassCredits.filter(c => c.memberPassId === memberPassId || c.passId === memberPassId || c.pass_id === memberPassId);
+  if (credits.length > 0) {
+    return credits.map(c => {
+      const total = c.sessionsIncluded !== undefined ? c.sessionsIncluded : (c.total_credits || c.remainingCredits || 0);
+      const used = c.sessionsUsed !== undefined ? c.sessionsUsed : Math.max(0, total - (c.remainingCredits ?? c.remaining_credits ?? 0));
+      const rem = c.remainingCredits !== undefined ? c.remainingCredits : (c.remaining_credits !== undefined ? c.remaining_credits : Math.max(0, total - used));
+      return {
+        ...c,
+        memberPassId,
+        disciplineId: c.disciplineId || c.discipline_id,
+        sessionsIncluded: total,
+        sessionsUsed: used,
+        remainingCredits: rem,
+        remaining_credits: rem
+      };
+    });
+  }
   const pass = state.memberPasses.find(p => p.id === memberPassId);
   if (pass && Array.isArray(pass.credits) && pass.credits.length > 0) {
-    return pass.credits.map(c => ({
-      memberPassId,
-      disciplineId: c.disciplineId || c.discipline_id,
-      sessionsIncluded: c.sessionsIncluded !== undefined ? c.sessionsIncluded : (c.total_credits || 0),
-      sessionsUsed: c.sessionsUsed !== undefined ? c.sessionsUsed : ((c.total_credits || 0) - (c.remaining_credits || 0))
-    }));
+    return pass.credits.map(c => {
+      const total = c.sessionsIncluded !== undefined ? c.sessionsIncluded : (c.total_credits || c.remainingCredits || 0);
+      const used = c.sessionsUsed !== undefined ? c.sessionsUsed : Math.max(0, total - (c.remainingCredits ?? c.remaining_credits ?? 0));
+      const rem = c.remainingCredits !== undefined ? c.remainingCredits : (c.remaining_credits !== undefined ? c.remaining_credits : Math.max(0, total - used));
+      return {
+        memberPassId,
+        disciplineId: c.disciplineId || c.discipline_id,
+        sessionsIncluded: total,
+        sessionsUsed: used,
+        remainingCredits: rem,
+        remaining_credits: rem
+      };
+    });
   }
   return [];
 }
@@ -1091,7 +1124,12 @@ export function getRemainingCredits(memberId, disciplineId) {
     const credits = getPassCredits(pass.id);
     const credit = credits.find(c => c.disciplineId === disciplineId || c.disciplineId === normDisciplineId);
     if (credit) {
-      totalRemaining += (credit.sessionsIncluded - credit.sessionsUsed);
+      const rem = credit.remainingCredits !== undefined
+        ? credit.remainingCredits
+        : (credit.remaining_credits !== undefined
+          ? credit.remaining_credits
+          : ((credit.sessionsIncluded || 0) - (credit.sessionsUsed || 0)));
+      totalRemaining += Math.max(0, rem);
     }
   }
   return totalRemaining;
@@ -1596,9 +1634,11 @@ export async function bookClass(memberId, sessionId) {
     throw new Error(`No remaining ${disc?.name || ''} credits. Purchase a package to continue booking.`);
   }
 
-  // Check for duplicate booking
+  // Check for duplicate active booking
   const existing = state.bookings.find(
-    b => isMemberIdMatch(b.memberId, memberId) && (b.classSessionId === sessionId || b.sessionId === sessionId) && !['cancelled'].includes(b.status)
+    b => isMemberIdMatch(b.memberId, memberId) &&
+         (b.classSessionId === sessionId || b.sessionId === sessionId) &&
+         ['upcoming', 'confirmed', 'pending_partner_approval'].includes(b.status)
   );
   if (existing) throw new Error('You already have a booking for this class.');
 
@@ -1636,6 +1676,9 @@ export async function bookClass(memberId, sessionId) {
     if (credit.remainingCredits !== undefined) {
       credit.remainingCredits = Math.max(0, credit.remainingCredits - 1);
     }
+    if (credit.remaining_credits !== undefined) {
+      credit.remaining_credits = Math.max(0, credit.remaining_credits - 1);
+    }
   }
   const passInState = state.memberPasses.find(p => p.id === passId);
   if (passInState && Array.isArray(passInState.credits)) {
@@ -1663,10 +1706,16 @@ export async function bookClass(memberId, sessionId) {
     session: session ? { ...session } : null
   };
   const existingIdx = state.bookings.findIndex(
-    b => b.id === booking.id || (isMemberIdMatch(b.memberId, memberId) && (b.classSessionId === sessionId || b.sessionId === sessionId) && b.status !== 'cancelled')
+    b => b.id === booking.id || (isMemberIdMatch(b.memberId, memberId) && (b.classSessionId === sessionId || b.sessionId === sessionId))
   );
   if (existingIdx >= 0) {
-    state.bookings[existingIdx] = booking;
+    state.bookings[existingIdx] = {
+      ...state.bookings[existingIdx],
+      ...booking,
+      status: 'upcoming',
+      cancelledAt: null,
+      cancelled_at: null
+    };
   } else {
     state.bookings.push(booking);
   }
@@ -2886,11 +2935,16 @@ export async function fetchMemberPasses(memberId) {
     state.memberPasses.forEach(p => {
       if (Array.isArray(p.credits)) {
         p.credits.forEach(c => {
+          const total = c.sessionsIncluded !== undefined ? c.sessionsIncluded : (c.total_credits || c.remainingCredits || 0);
+          const used = c.sessionsUsed !== undefined ? c.sessionsUsed : Math.max(0, total - (c.remainingCredits ?? c.remaining_credits ?? 0));
+          const rem = c.remainingCredits !== undefined ? c.remainingCredits : (c.remaining_credits !== undefined ? c.remaining_credits : Math.max(0, total - used));
           allCredits.push({
             memberPassId: p.id,
             disciplineId: c.disciplineId || c.discipline_id,
-            sessionsIncluded: c.sessionsIncluded !== undefined ? c.sessionsIncluded : (c.total_credits || 0),
-            sessionsUsed: c.sessionsUsed !== undefined ? c.sessionsUsed : ((c.total_credits || 0) - (c.remaining_credits || 0)),
+            sessionsIncluded: total,
+            sessionsUsed: used,
+            remainingCredits: rem,
+            remaining_credits: rem
           });
         });
       }
