@@ -2657,7 +2657,9 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
                     discipline_id: r.discipline_id || r.disciplineId || 'disc-pilates',
                     trainerId: r.trainer_id || r.trainerId || 'trainer-001',
                     trainer_id: r.trainer_id || r.trainerId || 'trainer-001',
-                    spotsRemaining: r.spotsRemaining ?? r.capacity ?? 6,
+                    spotsRemaining: r.spotsRemaining !== undefined
+                      ? r.spotsRemaining
+                      : Math.max(0, (r.capacity || 6) - (r.bookings?.[0]?.count || 0)),
                     durationMinutes: r.durationMinutes || 60
                   };
                 });

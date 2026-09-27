@@ -14,6 +14,14 @@ import { openForgotPasswordModal } from '../../components/forgot-password-modal.
 import * as auth from '../../core/auth.js';
 
 export async function render(container) {
+  try {
+    await Promise.all([
+      store.syncClassSessions().catch(() => {}),
+      store.syncBookings().catch(() => {}),
+      store.syncPayments().catch(() => {})
+    ]);
+  } catch (_) {}
+
   const stats = store.getOverviewStats();
   const partnerRequests = store.getBarreBookingRequests();
 
@@ -105,13 +113,30 @@ export async function render(container) {
   // 3. Grid: Utilization Breakdown + Upcoming Schedule
   const grid = createElement('div', { className: 'grid grid-2' });
 
-  // Utilization widget
+  // Utilization widget (Current Week)
   const disciplines = store.getDisciplines();
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+
+  const allBookings = store.getAllBookings ? store.getAllBookings() : [];
   const chartItems = disciplines.map(d => {
-    const sessions = store.getAllClassSessions().filter(s => s.disciplineId === d.id);
-    const total = sessions.reduce((acc, s) => acc + s.capacity, 0);
-    const filled = sessions.reduce((acc, s) => acc + (s.capacity - s.spotsRemaining), 0);
-    const pct = total > 0 ? Math.round((filled / total) * 100) : 65;
+    const weeklySessions = store.getAllClassSessions().filter(s => {
+      if (s.disciplineId !== d.id) return false;
+      const sDate = new Date(s.startsAt || s.date || s.startTime);
+      return !isNaN(sDate.getTime()) && sDate >= weekStart && sDate < weekEnd;
+    });
+    const targetSessions = weeklySessions.length > 0 ? weeklySessions : store.getAllClassSessions().filter(s => s.disciplineId === d.id);
+    const total = targetSessions.reduce((acc, s) => acc + (s.capacity || 6), 0);
+    const filled = targetSessions.reduce((acc, s) => {
+      const linked = allBookings.filter(b => (b.classSessionId === s.id || b.sessionId === s.id) && b.status !== 'cancelled');
+      const count = Math.max(linked.length, Math.max(0, (s.capacity || 6) - (s.spotsRemaining ?? s.capacity ?? 6)));
+      return acc + Math.min(s.capacity || 6, count);
+    }, 0);
+    const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
     return {
       label: d.name,
       value: pct,

@@ -3083,8 +3083,13 @@ export function getOverviewStats() {
     return d >= weekStart && d < weekEnd;
   });
 
-  const totalSpots = sessionsThisWeek.reduce((sum, s) => sum + s.capacity, 0);
-  const filledSpots = sessionsThisWeek.reduce((sum, s) => sum + (s.capacity - s.spotsRemaining), 0);
+  const totalSpots = sessionsThisWeek.reduce((sum, s) => sum + (s.capacity || 6), 0);
+  const allBookings = state.bookings;
+  const filledSpots = sessionsThisWeek.reduce((sum, s) => {
+    const linked = allBookings.filter(b => (b.classSessionId === s.id || b.sessionId === s.id) && b.status !== 'cancelled');
+    const filled = Math.max(linked.length, Math.max(0, (s.capacity || 6) - (s.spotsRemaining ?? s.capacity ?? 6)));
+    return sum + Math.min(s.capacity || 6, filled);
+  }, 0);
   const utilization = totalSpots > 0 ? Math.round((filledSpots / totalSpots) * 100) : 0;
 
   const thisMonth = now.getMonth();
