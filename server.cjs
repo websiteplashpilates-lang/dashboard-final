@@ -469,8 +469,10 @@ async function syncAllRazorpayPaymentsToSupabase(limit = 100) {
   }
 }
 
-// Check if a member has been previously approved by Physicq 57 for Barre
-function isMemberBarreApproved(memberId, email) {
+// Check if a specific pass has been approved by Physicq 57 for Barre
+// Per studio policy: every new package purchase containing Barre requires approval before credits release.
+function isMemberBarreApproved(memberId, email, passId) {
+  if (!passId) return false;
   try {
     const fs = require('fs');
     const path = require('path');
@@ -478,9 +480,8 @@ function isMemberBarreApproved(memberId, email) {
     if (!fs.existsSync(reviewFilePath)) return false;
     const reviews = JSON.parse(fs.readFileSync(reviewFilePath, 'utf-8'));
     return Array.isArray(reviews) && reviews.some(r => {
-      const matchId = memberId && r.memberId && String(r.memberId).toLowerCase() === String(memberId).toLowerCase();
-      const matchEmail = email && r.memberEmail && String(r.memberEmail).toLowerCase() === String(email).toLowerCase();
-      return (matchId || matchEmail) && r.status === 'accepted';
+      const matchPass = r.passId && String(r.passId) === String(passId);
+      return matchPass && r.status === 'accepted';
     });
   } catch (_) {
     return false;

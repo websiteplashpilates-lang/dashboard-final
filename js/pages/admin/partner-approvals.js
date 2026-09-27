@@ -249,8 +249,11 @@ export async function render(container) {
             <div style="font-size: 13px; font-weight: 600; color: #9B2C2C;">
               "${rev.decisionReason || 'Partner coach determined attendee profile requires medical clearance or specialized modification.'}"
             </div>
-            <div style="font-size: 11px; color: var(--ink-50); margin-top: 4px;">
-              Decision recorded on ${formatDate(rev.decidedAt || rev.createdAt)}.
+            <div style="font-size: 11px; color: var(--ink-50); margin-top: 4px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <span>Decision recorded on ${formatDate(rev.decidedAt || rev.createdAt)}.</span>
+              <a href="#/admin/refunds" class="btn btn-outline btn-sm" style="font-size: 11px; padding: 2px 8px; color: var(--rust); border-color: var(--rust);">
+                Go to Refund Queue &rarr;
+              </a>
             </div>
           `;
           card.appendChild(reasonAlert);

@@ -2202,17 +2202,10 @@ export function getPartnerReviews() {
   });
   const barrePackageIds = new Set(barrePackages.map(p => p.id));
 
-  // If a member was already approved once by Physicq 57, subsequent packages do NOT need approval
-  const approvedMemberIds = new Set(
-    (state.partnerReviews || [])
-      .filter(r => r.status === 'accepted')
-      .map(r => r.memberId)
-  );
-
   (state.memberPasses || []).forEach(pass => {
     if (barrePackageIds.has(pass.packageId) || (pass.credits && pass.credits.some(c => c.disciplineId === CONFIG.DISCIPLINES.BARRE))) {
-      if (approvedMemberIds.has(pass.memberId)) return; // Already approved once; no review needed!
-      const existing = state.partnerReviews.find(r => (isMemberIdMatch(r.memberId, pass.memberId) || r.passId === pass.id) && (r.packageId === pass.packageId || !r.packageId));
+      // Per studio policy: every package purchase containing Barre requires approval for that specific pass
+      const existing = state.partnerReviews.find(r => r.passId === pass.id || (isMemberIdMatch(r.memberId, pass.memberId) && r.packageId === pass.packageId && (!r.passId || r.passId === pass.id)));
       if (!existing) {
         const member = getMemberById(pass.memberId);
         const pkg = getPackageById(pass.packageId);
