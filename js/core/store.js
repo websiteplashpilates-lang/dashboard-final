@@ -1016,10 +1016,17 @@ export function getMemberPasses(memberId) {
  * @param {string} memberId
  * @returns {Object|undefined}
  */
-export function getActiveMemberPass(memberId) {
+export function getActiveMemberPass(memberId, disciplineId = null) {
   const passes = getMemberPasses(memberId);
   const now = new Date();
-  const pass = passes.find(p => {
+  const aliasMap = {
+    'disc-001': CONFIG.DISCIPLINES.PILATES,
+    'disc-002': CONFIG.DISCIPLINES.BARRE,
+    'disc-003': CONFIG.DISCIPLINES.SCULPT_YOGA
+  };
+  const normDisciplineId = disciplineId ? (aliasMap[disciplineId] || disciplineId) : null;
+
+  const validPasses = passes.filter(p => {
     if (p.status !== 'active') return false;
     if (p.expiresAt && new Date(p.expiresAt) < now) {
       p.status = 'expired';
@@ -1027,6 +1034,17 @@ export function getActiveMemberPass(memberId) {
     }
     return true;
   });
+
+  if (normDisciplineId) {
+    const passWithCredits = validPasses.find(p => {
+      const credits = getPassCredits(p.id);
+      const c = credits.find(cr => cr.disciplineId === normDisciplineId || cr.disciplineId === disciplineId);
+      return c && (c.sessionsIncluded - c.sessionsUsed) > 0;
+    });
+    if (passWithCredits) return enrichPass(passWithCredits);
+  }
+
+  const pass = validPasses[0];
   return pass ? enrichPass(pass) : undefined;
 }
 
@@ -1586,7 +1604,7 @@ export async function bookClass(memberId, sessionId) {
   // Direct class booking: all classes booked directly by members
   const status = 'upcoming';
 
-  const pass = getActiveMemberPass(memberId);
+  const pass = getActiveMemberPass(memberId, session.disciplineId);
   const passId = pass ? pass.id : null;
 
   let createdBooking = null;
@@ -1616,6 +1634,17 @@ export async function bookClass(memberId, sessionId) {
     credit.sessionsUsed = (credit.sessionsUsed || 0) + 1;
     if (credit.remainingCredits !== undefined) {
       credit.remainingCredits = Math.max(0, credit.remainingCredits - 1);
+    }
+  }
+  const passInState = state.memberPasses.find(p => p.id === passId);
+  if (passInState && Array.isArray(passInState.credits)) {
+    const pc = passInState.credits.find(
+      c => c.disciplineId === session.disciplineId || c.disciplineId === normDisciplineId || c.discipline_id === session.disciplineId || c.discipline_id === normDisciplineId
+    );
+    if (pc) {
+      if (pc.remaining_credits !== undefined) pc.remaining_credits = Math.max(0, pc.remaining_credits - 1);
+      if (pc.remainingCredits !== undefined) pc.remainingCredits = Math.max(0, pc.remainingCredits - 1);
+      pc.sessionsUsed = (pc.sessionsUsed || 0) + 1;
     }
   }
 

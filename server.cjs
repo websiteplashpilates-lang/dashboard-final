@@ -1762,8 +1762,8 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
             }
           } catch (_) {}
 
-          // Only manually decrement pass credit if Supabase trigger didn't already handle it
-          if (!created && passId) {
+          // Authoritatively decrement pass credit in Supabase
+          if (passId || memberId) {
             try {
               let targetDiscipline = body.disciplineId;
               if (!targetDiscipline && sessionId) {
@@ -1778,28 +1778,52 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
               };
               const normDiscipline = aliasMap[targetDiscipline] || targetDiscipline;
 
-              let credUrl = `${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(passId)}`;
-              if (normDiscipline) {
-                credUrl += `&discipline_id=eq.${encodeURIComponent(normDiscipline)}`;
+              let creds = null;
+              if (passId) {
+                let credUrl = `${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(passId)}`;
+                if (normDiscipline) credUrl += `&discipline_id=eq.${encodeURIComponent(normDiscipline)}`;
+                credUrl += `&limit=1`;
+                const credRes = await fetch(credUrl, {
+                  headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+                });
+                if (credRes.ok) creds = await credRes.json();
               }
-              credUrl += `&limit=1`;
 
-              const credRes = await fetch(credUrl, {
-                headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
-              });
-              if (credRes.ok) {
-                const creds = await credRes.json();
-                if (creds && creds[0] && creds[0].remaining_credits > 0) {
-                  await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?id=eq.${creds[0].id}`, {
-                    method: 'PATCH',
-                    headers: {
-                      apikey: supabaseKey,
-                      Authorization: `Bearer ${supabaseKey}`,
-                      'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ remaining_credits: creds[0].remaining_credits - 1 })
-                  });
+              // Fallback: If passId not provided or has 0 credits, look across all active passes of member
+              if ((!creds || !creds[0] || creds[0].remaining_credits <= 0) && memberId) {
+                const pRes = await fetch(`${SUPABASE_URL}/rest/v1/member_passes?member_id=eq.${encodeURIComponent(memberId)}&status=eq.active&select=id`, {
+                  headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+                });
+                if (pRes.ok) {
+                  const activePasses = await pRes.json();
+                  for (const ap of (activePasses || [])) {
+                    let apUrl = `${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(ap.id)}`;
+                    if (normDiscipline) apUrl += `&discipline_id=eq.${encodeURIComponent(normDiscipline)}`;
+                    apUrl += `&limit=1`;
+                    const apRes = await fetch(apUrl, {
+                      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+                    });
+                    if (apRes.ok) {
+                      const apCreds = await apRes.json();
+                      if (apCreds && apCreds[0] && apCreds[0].remaining_credits > 0) {
+                        creds = apCreds;
+                        break;
+                      }
+                    }
+                  }
                 }
+              }
+
+              if (creds && creds[0] && creds[0].remaining_credits > 0) {
+                await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?id=eq.${creds[0].id}`, {
+                  method: 'PATCH',
+                  headers: {
+                    apikey: supabaseKey,
+                    Authorization: `Bearer ${supabaseKey}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ remaining_credits: creds[0].remaining_credits - 1 })
+                });
               }
             } catch (_) {}
           }
@@ -1809,7 +1833,7 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
         }
 
         if (action === 'decrement_credit') {
-          if (passId) {
+          if (passId || memberId) {
             try {
               let targetDiscipline = body.disciplineId;
               if (!targetDiscipline && sessionId) {
@@ -1824,28 +1848,51 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
               };
               const normDiscipline = aliasMap[targetDiscipline] || targetDiscipline;
 
-              let credUrl = `${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(passId)}`;
-              if (normDiscipline) {
-                credUrl += `&discipline_id=eq.${encodeURIComponent(normDiscipline)}`;
+              let creds = null;
+              if (passId) {
+                let credUrl = `${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(passId)}`;
+                if (normDiscipline) credUrl += `&discipline_id=eq.${encodeURIComponent(normDiscipline)}`;
+                credUrl += `&limit=1`;
+                const credRes = await fetch(credUrl, {
+                  headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+                });
+                if (credRes.ok) creds = await credRes.json();
               }
-              credUrl += `&limit=1`;
 
-              const credRes = await fetch(credUrl, {
-                headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
-              });
-              if (credRes.ok) {
-                const creds = await credRes.json();
-                if (creds && creds[0] && creds[0].remaining_credits > 0) {
-                  await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?id=eq.${creds[0].id}`, {
-                    method: 'PATCH',
-                    headers: {
-                      apikey: supabaseKey,
-                      Authorization: `Bearer ${supabaseKey}`,
-                      'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ remaining_credits: creds[0].remaining_credits - 1 })
-                  });
+              if ((!creds || !creds[0] || creds[0].remaining_credits <= 0) && memberId) {
+                const pRes = await fetch(`${SUPABASE_URL}/rest/v1/member_passes?member_id=eq.${encodeURIComponent(memberId)}&status=eq.active&select=id`, {
+                  headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+                });
+                if (pRes.ok) {
+                  const activePasses = await pRes.json();
+                  for (const ap of (activePasses || [])) {
+                    let apUrl = `${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(ap.id)}`;
+                    if (normDiscipline) apUrl += `&discipline_id=eq.${encodeURIComponent(normDiscipline)}`;
+                    apUrl += `&limit=1`;
+                    const apRes = await fetch(apUrl, {
+                      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+                    });
+                    if (apRes.ok) {
+                      const apCreds = await apRes.json();
+                      if (apCreds && apCreds[0] && apCreds[0].remaining_credits > 0) {
+                        creds = apCreds;
+                        break;
+                      }
+                    }
+                  }
                 }
+              }
+
+              if (creds && creds[0] && creds[0].remaining_credits > 0) {
+                await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?id=eq.${creds[0].id}`, {
+                  method: 'PATCH',
+                  headers: {
+                    apikey: supabaseKey,
+                    Authorization: `Bearer ${supabaseKey}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ remaining_credits: creds[0].remaining_credits - 1 })
+                });
               }
             } catch (_) {}
           }

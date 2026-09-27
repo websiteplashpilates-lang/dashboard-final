@@ -517,6 +517,14 @@ export async function dbCreateBooking({ memberId, sessionId, passId, disciplineI
         .single();
 
       if (!error && data) {
+        try {
+          const baseUrl = typeof window !== 'undefined' ? '' : 'http://127.0.0.1:3333';
+          await fetch(`${baseUrl}/api/member/booking-action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'decrement_credit', memberId, sessionId, passId, disciplineId })
+          });
+        } catch (_) {}
         return data;
       }
       if (error && (error.code === 'P0001' || error.message?.includes('capped at strictly 6'))) {
