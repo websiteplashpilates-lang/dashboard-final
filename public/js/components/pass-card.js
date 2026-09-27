@@ -40,20 +40,13 @@ export function createPassCard(pass, credits = []) {
         text: item.discipline ? item.discipline.name : 'Sessions'
       });
 
-      const bar = createElement('div', { className: 'pass-credit-bar' });
-      const pct = item.included > 0 ? Math.round((item.remaining / item.included) * 100) : 0;
-      const barFill = createElement('div', {
-        className: 'pass-credit-bar-fill',
-        style: `width: ${pct}%;`
-      });
-      bar.appendChild(barFill);
-
+      const isZero = item.remaining <= 0;
       const count = createElement('div', {
-        className: 'pass-credit-count',
-        text: `${item.remaining}/${item.included}`
+        className: `pass-credit-count${isZero ? ' pass-credit-empty' : ''}`,
+        text: `${item.remaining} ${item.remaining === 1 ? 'Credit' : 'Credits'}`
       });
 
-      row.append(discName, bar, count);
+      row.append(discName, count);
       creditsContainer.appendChild(row);
     });
 
