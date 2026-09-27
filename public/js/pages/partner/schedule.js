@@ -187,7 +187,7 @@ export async function render(container) {
       });
 
       const cMeta = createElement('div', { className: 'class-card-meta' }, [
-        createElement('span', { text: `Coach: ${trainer ? trainer.name : 'Physicq 57 Coach'}` })
+        createElement('span', { text: 'Studio Session • 60m' })
       ]);
 
       const cActions = createElement('div', { className: 'class-card-actions' });

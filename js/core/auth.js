@@ -53,7 +53,7 @@ export const DEMO_ACCOUNTS = {
     email: 'priya.sharma@plashpilates.com',
     password: 'plashTrainer2026!',
     altPassword: 'trainer123',
-    label: 'Priya Sharma (Master Trainer)',
+    label: 'Studio Trainer',
     id: '44444444-4444-4444-4444-444444444444'
   }
 };

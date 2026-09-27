@@ -407,7 +407,7 @@ function createBatchAttendanceCard(batch, onRefresh) {
   titleDiv.innerHTML = `
     <div style="font-size: 13.5px; font-weight: 700; color: var(--ink); line-height: 1.2;">${batch.disciplineName}</div>
     <div style="font-size: 11.5px; color: var(--ink-60); margin-top: 2px;">
-      🕒 ${formatTime(batch.startsAt)} · Coach ${batch.trainerName || 'Instructor'}
+      🕒 ${formatTime(batch.startsAt)} · Sadashiva Nagar Studio
     </div>
   `;
 
@@ -541,7 +541,6 @@ function renderLedgerView(page, container) {
     { key: 'discipline', label: 'Discipline', sortable: true },
     { key: 'date', label: 'Date', sortable: true, render: (val) => formatDate(val) },
     { key: 'time', label: 'Time', sortable: true, render: (val) => val || '—' },
-    { key: 'trainer', label: 'Instructor', sortable: true },
     {
       key: 'status',
       label: 'Attendance & Status',
@@ -655,7 +654,7 @@ function renderLedgerView(page, container) {
     columns,
     data: tableData,
     searchable: true,
-    searchPlaceholder: 'Search by member, discipline, instructor...',
+    searchPlaceholder: 'Search by member, discipline...',
     filters: [
       {
         key: 'status',

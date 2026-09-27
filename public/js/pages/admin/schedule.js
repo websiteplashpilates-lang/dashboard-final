@@ -469,7 +469,7 @@ function renderScheduleTableView(parentEl, container) {
       date: s.date,
       time: s.time,
       disciplineName: disc ? disc.name : 'Unknown',
-      trainerName: trainer ? `${trainer.name} (${trainer.tier})` : 'Unassigned',
+      trainerName: '',
       capacity: `${filled}/${s.capacity}`,
       spotsRemaining: s.spotsRemaining,
       raw: s
@@ -545,7 +545,7 @@ function renderScheduleTableView(parentEl, container) {
     columns,
     data: tableData,
     searchable: true,
-    searchPlaceholder: 'Search by discipline, instructor or date...',
+    searchPlaceholder: 'Search by discipline or date...',
     filters: [
       {
         key: 'disciplineName',

@@ -273,16 +273,16 @@ function renderPast(container, memberId) {
     if (b.status === 'cancelled') {
       subText += ` · Cancelled on ${formatDate(b.cancelledAt || b.bookedAt)} (Credit refunded)`;
     } else if (b.status === 'no_show') {
-      subText += b.creditWaived ? ' · No-show: Credit waived by trainer' : ' · No-show: Credit forfeited per studio policy';
+      subText += b.creditWaived ? ' · No-show: Credit waived by studio' : ' · No-show: Credit forfeited per studio policy';
     } else if (b.status === 'completed' || b.status === 'attended') {
-      subText += ' · Completed and verified by trainer';
+      subText += ' · Completed session';
     }
 
-    const trainerEl = createElement('div', {
+    const metaEl = createElement('div', {
       style: 'font-size: var(--text-xs); color: var(--ink-50); margin-top: 2px;',
       text: subText
     });
-    info.append(titleEl, trainerEl);
+    info.append(titleEl, metaEl);
 
     let badgeText = 'Attended';
     let badgeStatus = 'completed';

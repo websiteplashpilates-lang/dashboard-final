@@ -114,7 +114,7 @@ export async function render(container) {
     dateBox.append(dayNum, monthName);
 
     const info = createElement('div', { className: 'next-session-info' });
-    const title = createElement('div', { className: 'next-session-title', text: `${disc ? disc.name : 'Pilates Session'} with ${trainer ? trainer.name : 'Coach'}` });
+    const title = createElement('div', { className: 'next-session-title', text: disc ? disc.name : 'Pilates Session' });
     const meta = createElement('div', { className: 'next-session-meta', text: `${formatTime(sessionDate)} • 60 Minutes • Bengaluru Studio` });
     info.append(title, meta);
 

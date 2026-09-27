@@ -161,7 +161,7 @@ export async function render(container) {
     });
     const subEl = createElement('div', {
       style: 'font-size: 11px; color: var(--ink-50);',
-      text: `Trainer: ${trainer ? trainer.name : 'Coach'} • ${s.date}`
+      text: `Apparatus Session • ${formatDate(s.date)}`
     });
     info.append(tEl, subEl);
 

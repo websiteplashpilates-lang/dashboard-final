@@ -433,7 +433,7 @@ export async function render(container) {
           class="form-input" 
           required 
           autocomplete="name"
-          placeholder="e.g. Priya Sharma"
+          placeholder="e.g. Ananya Rao"
           style="width: 100%; height: 40px; font-size: 13.5px;"
         />
       </div>
