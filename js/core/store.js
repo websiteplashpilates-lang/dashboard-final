@@ -2404,7 +2404,8 @@ export async function acceptPartnerReview(reviewId, coachName = 'Physicq 57 Coac
         action: 'decide',
         reviewId,
         status: 'accepted',
-        decidedBy: coachName
+        decidedBy: coachName,
+        pendingBarreCredits: review.pendingBarreCredits
       })
     });
   } catch (_) {}

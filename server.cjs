@@ -2509,7 +2509,7 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
           }
 
           // Hydrate member & package details if missing on r
-          if ((!r.memberName || r.memberName === 'Member' || !r.packageName || r.packageName === 'undefined') && r.passId) {
+          if ((!r.memberName || r.memberName === 'Member' || !r.packageName || r.packageName === 'undefined' || !r.pendingBarreCredits) && r.passId) {
             try {
               const passCheck = await fetch(`${SUPABASE_URL}/rest/v1/member_passes?id=eq.${encodeURIComponent(r.passId)}&select=*,member:profiles(*),package:packages(*)`, {
                 headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
@@ -2524,6 +2524,14 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
                   if (!r.memberPhone) r.memberPhone = p.member?.phone || '';
                   if (!r.packageId) r.packageId = p.package_id;
                   if (!r.packageName || r.packageName === 'undefined') r.packageName = p.package?.name || 'Barre Package';
+                  if (!r.pendingBarreCredits && p.package) {
+                    const bAlloc = (p.package.session_allocations || []).find(a =>
+                      a.disciplineId === 'disc-barre' || a.discipline_id === 'disc-barre' || String(a.disciplineId || '').toLowerCase().includes('barre')
+                    );
+                    if (bAlloc && bAlloc.sessionCount) {
+                      r.pendingBarreCredits = Number(bAlloc.sessionCount);
+                    }
+                  }
                 }
               }
             } catch (_) {}
@@ -2552,10 +2560,27 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
             } catch (_) {}
           }
 
-          // If accepted, grant Barre credits in Supabase member_pass_credits
+          // If accepted, grant Barre credits in Supabase member_pass_credits based on exact package allocation
           if (body.status === 'accepted') {
             try {
-              const creditsToGrant = Number(r.pendingBarreCredits) || 12;
+              let creditsToGrant = Number(body.pendingBarreCredits) || Number(r.pendingBarreCredits) || 0;
+              if (!creditsToGrant && targetPassId) {
+                try {
+                  const passQ = await fetch(`${SUPABASE_URL}/rest/v1/member_passes?id=eq.${encodeURIComponent(targetPassId)}&select=*,package:packages(*)`, {
+                    headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+                  });
+                  if (passQ.ok) {
+                    const passResData = await passQ.json();
+                    if (passResData && passResData[0] && passResData[0].package) {
+                      const bAlloc = (passResData[0].package.session_allocations || []).find(a =>
+                        a.disciplineId === 'disc-barre' || a.discipline_id === 'disc-barre' || String(a.disciplineId || '').toLowerCase().includes('barre')
+                      );
+                      if (bAlloc && bAlloc.sessionCount) creditsToGrant = Number(bAlloc.sessionCount);
+                    }
+                  }
+                } catch (_) {}
+              }
+              if (!creditsToGrant) creditsToGrant = 8;
               if (targetPassId) {
                 const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(targetPassId)}&discipline_id=eq.disc-barre`, {
                   method: 'PATCH',
