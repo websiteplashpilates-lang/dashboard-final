@@ -2011,39 +2011,94 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
             }
             target.attendance_marked_at = new Date().toISOString();
             saveBookingsToFile(localBookings);
+          } else {
+            const newEntry = {
+              id: bookingId,
+              member_id: body.memberId || null,
+              session_id: body.sessionId || null,
+              pass_id: body.passId || null,
+              status: patch.status,
+              attendance_status: patch.status,
+              credit_waived: !!body.refundCredit,
+              creditWaived: !!body.refundCredit,
+              attendance_notes: body.reason || '',
+              attendanceNotes: body.reason || '',
+              attendance_marked_at: new Date().toISOString(),
+              booked_at: new Date().toISOString()
+            };
+            localBookings.unshift(newEntry);
+            saveBookingsToFile(localBookings);
           }
 
           // If no-show and refundCredit is requested by trainer, restore credit
           if (status === 'no_show' && body.refundCredit) {
             try {
-              const bLookup = await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${encodeURIComponent(bookingId)}&select=pass_id`, {
-                headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
-              });
-              let targetPassId = null;
-              if (bLookup.ok) {
-                const bData = await bLookup.json();
-                targetPassId = bData && bData[0] ? bData[0].pass_id : null;
+              let targetPassId = body.passId;
+              let targetMemberId = body.memberId;
+              let targetSessionId = body.sessionId;
+
+              if (!targetPassId) {
+                const bLookup = await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${encodeURIComponent(bookingId)}&select=pass_id,member_id,session_id`, {
+                  headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+                });
+                if (bLookup.ok) {
+                  const bData = await bLookup.json();
+                  if (bData && bData[0]) {
+                    targetPassId = bData[0].pass_id;
+                    targetMemberId = targetMemberId || bData[0].member_id;
+                    targetSessionId = targetSessionId || bData[0].session_id;
+                  }
+                }
               }
               if (!targetPassId && target) {
                 targetPassId = target.pass_id || target.passId;
+                targetMemberId = targetMemberId || target.member_id || target.memberId;
+                targetSessionId = targetSessionId || target.session_id || target.sessionId;
               }
-              if (targetPassId) {
-                const credRes = await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(targetPassId)}&order=created_at.desc&limit=1`, {
+              if (!targetPassId && targetMemberId) {
+                const pRes = await fetch(`${SUPABASE_URL}/rest/v1/member_passes?member_id=eq.${encodeURIComponent(targetMemberId)}&status=eq.active&order=created_at.desc&limit=1`, {
                   headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
                 });
-                if (credRes.ok) {
-                  const creds = await credRes.json();
-                  if (creds && creds[0]) {
-                    await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?id=eq.${creds[0].id}`, {
-                      method: 'PATCH',
-                      headers: {
-                        apikey: supabaseKey,
-                        Authorization: `Bearer ${supabaseKey}`,
-                        'Content-Type': 'application/json'
-                      },
-                      body: JSON.stringify({ remaining_credits: creds[0].remaining_credits + 1 })
-                    });
-                  }
+                if (pRes.ok) {
+                  const pList = await pRes.json();
+                  if (pList && pList[0]) targetPassId = pList[0].id;
+                }
+              }
+
+              // Identify target discipline from session if possible
+              let targetDisc = body.disciplineId;
+              if (!targetDisc && targetSessionId) {
+                const localSessions = getClassSessionsFromFile();
+                const matchedS = localSessions.find(s => s.id === targetSessionId);
+                if (matchedS) targetDisc = matchedS.discipline_id || matchedS.disciplineId;
+              }
+
+              if (targetPassId) {
+                let credUrl = `${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(targetPassId)}`;
+                if (targetDisc) credUrl += `&discipline_id=eq.${encodeURIComponent(targetDisc)}`;
+                credUrl += `&order=created_at.desc&limit=1`;
+
+                let credRes = await fetch(credUrl, {
+                  headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+                });
+                let creds = credRes.ok ? await credRes.json() : null;
+                if (!creds || !creds[0]) {
+                  credRes = await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?pass_id=eq.${encodeURIComponent(targetPassId)}&order=created_at.desc&limit=1`, {
+                    headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` }
+                  });
+                  if (credRes.ok) creds = await credRes.json();
+                }
+
+                if (creds && creds[0]) {
+                  await fetch(`${SUPABASE_URL}/rest/v1/member_pass_credits?id=eq.${creds[0].id}`, {
+                    method: 'PATCH',
+                    headers: {
+                      apikey: supabaseKey,
+                      Authorization: `Bearer ${supabaseKey}`,
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ remaining_credits: (creds[0].remaining_credits || 0) + 1 })
+                  });
                 }
               }
             } catch (_) {}
@@ -2149,13 +2204,38 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
           }
         } catch (_) {}
 
-        // Merge remote and local bookings without duplicates
-        const remoteIds = new Set((remoteBookings || []).map(b => b.id));
+        // Merge remote and local bookings, preserving credit_waived and attendance metadata
+        const localMap = new Map();
+        localBookings.forEach(lb => {
+          if (lb.id) localMap.set(lb.id, lb);
+          const pairKey = `${lb.member_id || lb.memberId}__${lb.session_id || lb.sessionId}`;
+          if (pairKey !== '__') localMap.set(pairKey, lb);
+        });
+
+        const mergedRemote = (remoteBookings || []).map(rb => {
+          const pairKey = `${rb.member_id || rb.memberId}__${rb.session_id || rb.sessionId}`;
+          const lb = localMap.get(rb.id) || localMap.get(pairKey);
+          if (lb) {
+            return {
+              ...lb,
+              ...rb,
+              credit_waived: lb.credit_waived ?? lb.creditWaived ?? false,
+              creditWaived: lb.creditWaived ?? lb.credit_waived ?? false,
+              attendance_notes: lb.attendance_notes || lb.attendanceNotes || rb.attendance_notes || '',
+              attendanceNotes: lb.attendanceNotes || lb.attendance_notes || rb.attendanceNotes || '',
+              attendance_marked_at: lb.attendance_marked_at || lb.attendanceMarkedAt || rb.attendance_marked_at || null,
+              attendanceMarkedAt: lb.attendanceMarkedAt || lb.attendance_marked_at || rb.attendanceMarkedAt || null,
+            };
+          }
+          return rb;
+        });
+
+        const remoteIds = new Set((mergedRemote || []).map(b => b.id));
         const remotePairKeys = new Set(
-          (remoteBookings || []).map(b => `${b.member_id || b.memberId}__${b.session_id || b.sessionId}`)
+          (mergedRemote || []).map(b => `${b.member_id || b.memberId}__${b.session_id || b.sessionId}`)
         );
         const merged = [
-          ...(remoteBookings || []),
+          ...mergedRemote,
           ...localBookings.filter(b => !remoteIds.has(b.id) && !remotePairKeys.has(`${b.member_id || b.memberId}__${b.session_id || b.sessionId}`))
         ];
 
@@ -2167,7 +2247,6 @@ const EMBEDDED_INDEX_HTML = require('./email-templates/index-html-string.cjs');
       } catch (err) {
         console.error('[API /api/bookings error]', err.message);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify(getBookingsFromFile()));
       }
     }
 

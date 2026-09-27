@@ -771,7 +771,11 @@ export async function dbMarkAttendance(bookingId, status, options = {}) {
         bookingId,
         status,
         refundCredit: !!options.refundCredit,
-        reason: options.reason || ''
+        reason: options.reason || '',
+        memberId: options.memberId || null,
+        sessionId: options.sessionId || null,
+        passId: options.passId || null,
+        disciplineId: options.disciplineId || null
       })
     });
   } catch (err) {
@@ -1536,6 +1540,12 @@ export async function dbGetBookings(memberId = null) {
       status,
       bookedAt: b.booked_at || b.bookedAt,
       cancelledAt: b.cancelled_at || b.cancelledAt,
+      creditWaived: b.creditWaived ?? b.credit_waived ?? false,
+      credit_waived: b.credit_waived ?? b.creditWaived ?? false,
+      attendanceNotes: b.attendanceNotes || b.attendance_notes || '',
+      attendance_notes: b.attendance_notes || b.attendanceNotes || '',
+      attendanceMarkedAt: b.attendanceMarkedAt || b.attendance_marked_at || null,
+      attendance_marked_at: b.attendance_marked_at || b.attendanceMarkedAt || null,
       memberName: mName,
       memberEmail: mEmail,
       memberPhone: mPhone,

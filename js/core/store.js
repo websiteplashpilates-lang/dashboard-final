@@ -1827,9 +1827,13 @@ export async function markAttendance(bookingId, status, options = {}) {
       const targetPassId = booking.passId || (pass ? pass.id : null);
       if (targetPassId) {
         const credit = state.memberPassCredits.find(
-          c => c.memberPassId === targetPassId && c.disciplineId === session.disciplineId
+          c => c.memberPassId === targetPassId && (c.disciplineId === session?.disciplineId || c.discipline_id === session?.disciplineId)
         );
-        if (credit) credit.sessionsUsed = Math.max(0, credit.sessionsUsed - 1);
+        if (credit) {
+          credit.sessionsUsed = Math.max(0, (credit.sessionsUsed || 0) - 1);
+          if (typeof credit.remainingCredits === 'number') credit.remainingCredits += 1;
+          if (typeof credit.remaining_credits === 'number') credit.remaining_credits += 1;
+        }
       }
       logActivity(booking.memberId, 'trainer', `Marked no-show: credit refunded for genuine reason (${options.reason || 'Trainer waiver'})`, 'attendance');
     } else {
@@ -1885,9 +1889,24 @@ export async function syncBookings(memberId = null) {
   try {
     const remote = await dbGetBookings(memberId);
     if (Array.isArray(remote)) {
-      const remoteIds = new Set(remote.map(r => r.id));
+      const localMap = new Map((state.bookings || []).map(b => [b.id, b]));
+      const enrichedRemote = remote.map(r => {
+        const local = localMap.get(r.id);
+        if (local) {
+          return {
+            ...local,
+            ...r,
+            creditWaived: r.creditWaived ?? r.credit_waived ?? local.creditWaived ?? local.credit_waived ?? false,
+            credit_waived: r.credit_waived ?? r.creditWaived ?? local.credit_waived ?? local.creditWaived ?? false,
+            attendanceNotes: r.attendanceNotes || r.attendance_notes || local.attendanceNotes || local.attendance_notes || '',
+            attendanceMarkedAt: r.attendanceMarkedAt || r.attendance_marked_at || local.attendanceMarkedAt || local.attendance_marked_at || null
+          };
+        }
+        return r;
+      });
+      const remoteIds = new Set(enrichedRemote.map(r => r.id));
       const pendingLocal = state.bookings.filter(b => b && b.id && !remoteIds.has(b.id));
-      state.bookings = [...remote, ...pendingLocal];
+      state.bookings = [...enrichedRemote, ...pendingLocal];
       saveBookingsCache();
       events.emit(EVENT.DATA_MUTATED, { source: 'sync_bookings' });
     }
